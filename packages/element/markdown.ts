@@ -54,7 +54,7 @@ function transformChildren(node: Node) {
   return children
 }
 
-function esacpeSlot(...children: ElementNode[]) {
+function esacpeSlot(...children: [ElementNode]) {
   while (typeof children[children.length - 1] === "string") {
     const lastStr = children[children.length - 1] as string
 
