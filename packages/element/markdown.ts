@@ -5,6 +5,10 @@ const parser = new Parser()
 
 let slotValues: ElementNode[] = []
 
+export function raw(strings: TemplateStringsArray, ...values: ElementNode[]) {
+  return pack(strings.flatMap((s, i) => values[i] ? [s, values[i]] : [s]).flat())
+}
+
 export function markdown(strings: TemplateStringsArray, ...values: ElementNode[]) {
   slotValues = values
   const markdownText = strings.reduce((res, str, i) =>

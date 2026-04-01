@@ -1,4 +1,4 @@
-import { markdown } from "./markdown"
+import { markdown, raw } from "./markdown"
 
 export type ElementNode = Element | string | number | boolean | null | undefined
 
@@ -21,6 +21,7 @@ export function h<T extends keyof JSX.IntrinsicElements>(
   return new Element(type, props || {} as JSX.IntrinsicElements[T], children)
 }
 
+h.raw = raw
 h.markdown = markdown
 
 export const Fragment = "Fragment"
