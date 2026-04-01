@@ -1,5 +1,5 @@
 import { Node, Parser, type NodeType } from "commonmark"
-import { createElement, type ElementNode } from "../jsx-runtime"
+import { createElement, type ElementNode } from "./jsx-runtime"
 
 const parser = new Parser()
 
