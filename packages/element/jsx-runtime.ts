@@ -10,14 +10,14 @@ export class Element<T extends keyof JSX.IntrinsicElements = keyof JSX.Intrinsic
     readonly children: ElementNode[]
   ) { }
 
-  toString() {
-    const formatter = new BufferFormatter()
+  toString(color = false) {
+    const formatter = new BufferFormatter({ color })
     formatter.element(this)
     return formatter.buffer
   }
 
   [Symbol.for('nodejs.util.inspect.custom')]() {
-    return this.toString()
+    return this.toString(true)
   }
 }
 
