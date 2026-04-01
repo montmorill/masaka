@@ -1,8 +1,7 @@
 import { h } from "@masaka/element"
 
 console.log(h.raw`\
-# Hello, ${<mention everyone />}
-
+# Hello, ${<mention everyone />}!
 ${<img src="https://masaka.dev/avatar.png" />}\
 `)
 

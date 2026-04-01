@@ -1,4 +1,4 @@
-import { BufferFormatter, Formatter } from "./formatter"
+import { BufferFormatter } from "./formatter"
 import { markdown, raw } from "./markdown"
 
 export type ElementNode = Element | string | number | boolean | null | undefined

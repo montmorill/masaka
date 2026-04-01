@@ -97,6 +97,15 @@ export class Formatter {
   node(node: ElementNode) {
     if (node instanceof Element) {
       this.element(node)
+    } else if (typeof node === "string") {
+      const lines = node.split("\n")
+      this.print(lines[0])
+      if (lines.length > 1) {
+        for (const line of lines.slice(1)) {
+          this.newLine()
+          this.print(line)
+        }
+      }
     } else {
       this.print(node)
     }
