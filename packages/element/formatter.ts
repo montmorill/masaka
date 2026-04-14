@@ -23,8 +23,8 @@ export class Formatter {
 
   constructor(
     readonly print: (data: any) => void,
-    readonly opts: InspectOptions & FormatterOptions,
-  ) { }
+    readonly opts: InspectOptions & FormatterOptions = {},
+  ) {}
 
   nest() {
     return new Formatter(this.print, {
@@ -121,7 +121,7 @@ export class Formatter {
 
 export class BufferFormatter extends Formatter {
   buffer = ''
-  constructor(opts?: InspectOptions & Omit<FormatterOptions, 'print'>) {
-    super(text => this.buffer += text, opts ?? {})
+  constructor(opts: InspectOptions & Omit<FormatterOptions, 'print'> = {}) {
+    super(text => this.buffer += text, opts)
   }
 }
