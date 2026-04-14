@@ -1,4 +1,5 @@
-import type { Event, Message } from '@yak/protocol'
+import type { Element } from '@yak/element'
+import type { Event, GuildMember, Message, User } from '@yak/protocol'
 import type { Bot } from './bot'
 import { Channel } from '@yak/protocol'
 import { Context, Service } from 'cordis'
@@ -49,46 +50,46 @@ export class Session<C extends Context = Context> {
     return Context.associate(this, 'session')
   }
 
-  get isDirect() {
+  get isDirect(): boolean {
     return this.event.channel?.type === Channel.Type.DIRECT
   }
 
-  set isDirect(value) {
+  set isDirect(value: boolean) {
     (this.event.channel ??= {} as Channel).type = value ? Channel.Type.DIRECT : Channel.Type.TEXT
   }
 
-  get author() {
+  get author(): Partial<User & GuildMember> {
     return {
       ...this.event.user,
       ...this.event.member,
     }
   }
 
-  get uid() {
+  get uid(): string {
     return `${this.platform}:${this.userId}`
   }
 
-  get gid() {
+  get gid(): string {
     return `${this.platform}:${this.guildId}`
   }
 
-  get cid() {
+  get cid(): string {
     return `${this.platform}:${this.channelId}`
   }
 
-  get fid() {
+  get fid(): string {
     return `${this.platform}:${this.channelId}:${this.userId}`
   }
 
-  get sid() {
+  get sid(): string {
     return `${this.platform}:${this.selfId}`
   }
 
-  get element() {
+  get element(): Element | undefined {
     return this.event.message?.element
   }
 
-  set element(value) {
+  set element(value: Element | undefined) {
     this.event.message ??= {}
     this.event.message.element = value
   }
@@ -107,7 +108,7 @@ export class Session<C extends Context = Context> {
   //   }
   // }
 
-  setInternal(type: string, data: any) {
+  setInternal(type: string, data: any): void {
     this.event._type = type
     this.event._data = data
     const internal = Object.create(this.bot.internal)
@@ -124,7 +125,7 @@ export class Session<C extends Context = Context> {
   //   }, this)
   // }
 
-  toJSON() {
+  toJSON(): Event {
     const event: Event = {
       ...clone(this.event),
       sn: this.sn,
@@ -141,7 +142,7 @@ export class Session<C extends Context = Context> {
   }
 }
 
-export function defineAccessor(prototype: object, name: string, path: string) {
+export function defineAccessor(prototype: object, name: string, path: string): void {
   const keys = path.split('.')
   Object.defineProperty(prototype, name, {
     get() {

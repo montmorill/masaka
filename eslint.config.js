@@ -17,4 +17,5 @@ export default antfu({
     // TypeError: context.sourceCode.isGlobalReference is not a function
     'unicorn/error-message': 'off',
   },
+  type: 'lib',
 })

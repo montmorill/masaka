@@ -26,29 +26,29 @@ export class Formatter {
     readonly opts: InspectOptions & FormatterOptions = {},
   ) {}
 
-  nest() {
+  nest(): Formatter {
     return new Formatter(this.print, {
       ...this.opts,
       indent: `${this.opts.indent ?? ''}  `,
     })
   }
 
-  newLine() {
+  newLine(): void {
     if (this.opts.inline)
       return
     this.print(`\n${this.opts.indent ?? ''}`)
     this.needLine = false
   }
 
-  colored(color: keyof typeof COLORS, data: any) {
+  colored(color: keyof typeof COLORS, data: any): string {
     return this.opts.colors ? `\x1B[${COLORS[color]}m${data}\x1B[0m` : data
   }
 
-  string(value: string) {
+  string(value: string): void {
     this.print(`"${this.colored('green', value.replaceAll('"', '\\"'))}"`)
   }
 
-  indented(value: string) {
+  indented(value: string): void {
     this.needLine = false
     const lines = value.split('\n')
     this.print(lines[0])
@@ -58,11 +58,11 @@ export class Formatter {
     }
   }
 
-  object(object: any) {
+  object(object: any): void {
     this.indented(`{${inspect(object, this.opts)}}`)
   }
 
-  attrs(attrs: Record<string, any>) {
+  attrs(attrs: Record<string, any>): void {
     for (const [key, value] of Object.entries(attrs)) {
       this.print(` ${this.colored('red', key)}`)
       if (value === true)
@@ -75,7 +75,7 @@ export class Formatter {
     }
   }
 
-  element(element: Element) {
+  element(element: Element): void {
     const tag = this.colored('green', element.type === Fragment ? '' : element.type)
     if (this.needLine)
       this.newLine()
@@ -103,7 +103,7 @@ export class Formatter {
     this.needLine = true
   }
 
-  node(node: Fragment) {
+  node(node: Fragment): void {
     if (node instanceof Element) {
       this.element(node)
     }

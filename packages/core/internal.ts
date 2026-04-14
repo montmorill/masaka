@@ -76,7 +76,7 @@ export class InternalRouter<C extends Context> {
 
   constructor(public ctx: Context) {}
 
-  define<P extends string>(path: P, callback: (request: InternalRequest<C, ExtractParams<P>>) => Promise<Response>) {
+  define<P extends string>(path: P, callback: (request: InternalRequest<C, ExtractParams<P>>) => Promise<Response>): () => boolean {
     return this.ctx.effect(() => {
       const route: InternalRoute<C> = {
         ...pathToRegexp(path),

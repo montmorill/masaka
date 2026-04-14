@@ -32,13 +32,13 @@ export class Element<T extends keyof JSX.IntrinsicElements = keyof JSX.Intrinsic
     readonly children: Fragment[] = [],
   ) {}
 
-  toString(opts?: InspectOptions & Omit<FormatterOptions, 'print'>) {
+  toString(opts?: InspectOptions & Omit<FormatterOptions, 'print'>): string {
     const formatter = new BufferFormatter(opts)
     formatter.element(this)
     return formatter.buffer
   }
 
-  [util.inspect.custom](_: any, opts: InspectOptions) {
+  [util.inspect.custom](_: any, opts: InspectOptions): string {
     return this.toString(opts)
   }
 }

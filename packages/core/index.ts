@@ -1,4 +1,5 @@
 import type { Meta, Response, SendOptions } from '@yak/protocol'
+import type { Disposable } from 'cordis'
 import type { Awaitable, Dict } from 'cosmokit'
 import type { Bot } from './bot'
 import type { ExtractParams, InternalRequest } from './internal'
@@ -112,7 +113,7 @@ class DisposableSet<T> {
     })
   }
 
-  add(...values: T[]) {
+  add(...values: T[]): Disposable {
     const sn = ++this.sn
     return this.ctx.effect(() => {
       let hasUpdate = false
@@ -142,7 +143,7 @@ class DisposableSet<T> {
     })
   }
 
-  [Symbol.iterator]() {
+  [Symbol.iterator](): Iterator<T> {
     return new Set(([] as T[]).concat(...this.map1.values()))[Symbol.iterator]()
   }
 }
@@ -254,7 +255,7 @@ export class Satori<C extends Context = Context> extends Service<unknown, C> {
   //   return this.ctx.set(`component:${name}`, render)
   // }
 
-  defineInternalRoute<P extends string>(path: P, callback: (request: InternalRequest<C, ExtractParams<P>>) => Promise<Response>) {
+  defineInternalRoute<P extends string>(path: P, callback: (request: InternalRequest<C, ExtractParams<P>>) => Promise<Response>): Disposable {
     return this._internalRouter.define(path, callback)
   }
 

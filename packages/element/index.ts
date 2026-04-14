@@ -14,7 +14,7 @@ declare global {
   }
 }
 
-function raw(strings: TemplateStringsArray, ...values: Fragment[]) {
+function raw(strings: TemplateStringsArray, ...values: Fragment[]): Fragment {
   return h.template(strings.flatMap((s, i) => values[i] ? [s, values[i]] : [s]).flat())
 }
 

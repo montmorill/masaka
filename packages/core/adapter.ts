@@ -3,7 +3,7 @@ import type { Context } from 'cordis'
 import type { Awaitable } from 'cosmokit'
 import type { Bot } from './bot'
 import { Status } from '@yak/protocol'
-import { z } from 'cordis'
+import { Schema } from 'cordis'
 import { remove, Time } from 'cosmokit'
 
 export abstract class Adapter<C extends Context = Context, B extends Bot<C> = Bot<C>> {
@@ -12,10 +12,10 @@ export abstract class Adapter<C extends Context = Context, B extends Bot<C> = Bo
   public bots: B[] = []
 
   constructor(protected ctx: C) {}
-  async connect(_bot: B) {}
-  async disconnect(_bot: B) {}
+  async connect(_bot: B): Promise<void> {}
+  async disconnect(_bot: B): Promise<void> {}
 
-  fork(ctx: Context, bot: B) {
+  fork(ctx: Context, bot: B): void {
     bot.adapter = this
     this.bots.push(bot)
     ctx.on('dispose', () => {
@@ -31,10 +31,10 @@ export namespace Adapter {
     retryInterval: number
   }
 
-  export const WsClientConfig: z<WsClientConfig> = z.object({
-    retryTimes: z.natural().description('初次连接时的最大重试次数。').default(6),
-    retryInterval: z.natural().role('ms').description('初次连接时的重试时间间隔。').default(5 * Time.second),
-    retryLazy: z.natural().role('ms').description('连接关闭后的重试时间间隔。').default(Time.minute),
+  export const WsClientConfig: Schema<WsClientConfig> = Schema.object({
+    retryTimes: Schema.natural().description('初次连接时的最大重试次数。').default(6),
+    retryInterval: Schema.natural().role('ms').description('初次连接时的重试时间间隔。').default(5 * Time.second),
+    retryLazy: Schema.natural().role('ms').description('连接关闭后的重试时间间隔。').default(Time.minute),
   }).description('连接设置')
 
   export abstract class WsClientBase<C extends Context, B extends Bot<C>> extends Adapter<C, B> {
@@ -50,7 +50,7 @@ export namespace Adapter {
       super(ctx)
     }
 
-    async start() {
+    async start(): Promise<void> {
       let retryCount = 0
       const connectionId = ++this.connectionId
       const logger = this.ctx.logger('adapter')
@@ -58,14 +58,14 @@ export namespace Adapter {
 
       let connect: (initial?: boolean) => void
 
-      const reconnect = (initial: boolean, message: string) => {
+      const reconnect = (initial: boolean, message: string): void => {
         if (!this.getActive() || connectionId !== this.connectionId)
           return
 
         let timeout = retryInterval
         if (retryCount >= retryTimes) {
           if (initial) {
-            return this.setStatus(Status.OFFLINE, new Error(message))
+            return void this.setStatus(Status.OFFLINE, new Error(message))
           }
           else {
             timeout = retryLazy
@@ -119,7 +119,7 @@ export namespace Adapter {
       connect(true)
     }
 
-    async stop() {
+    async stop(): Promise<void> {
       this.socket?.close()
     }
   }
@@ -132,20 +132,20 @@ export namespace Adapter {
       bot.adapter = this
     }
 
-    getActive() {
+    getActive(): boolean {
       return this.bot.isActive
     }
 
-    setStatus(status: Status, error?: Error) {
+    setStatus(status: Status, error?: Error): void {
       this.bot.status = status
       this.bot.error = error
     }
 
-    override connect(_bot: B) {
+    override connect(_bot: B): Promise<void> {
       return this.start()
     }
 
-    override disconnect(_bot: B) {
+    override disconnect(_bot: B): Promise<void> {
       return this.stop()
     }
   }

@@ -7,7 +7,7 @@ const parser = new Parser()
 
 let slotValues: Fragment[] = []
 
-export function markdown(strings: TemplateStringsArray, ...values: Fragment[]) {
+export function markdown(strings: TemplateStringsArray, ...values: Fragment[]): Fragment {
   slotValues = values
   const markdownText = strings.reduce((res, str, i) =>
     res + str + (i < slotValues.length ? `<slot>${i}</slot>` : ''), '')
@@ -66,7 +66,7 @@ function transformNode(node: Node): Fragment {
   return TRANSFORMERS[node.type](node)
 }
 
-function transformChildren(node: Node) {
+function transformChildren(node: Node): Fragment[] {
   const children: Fragment[] = []
   for (let child = node.firstChild; child; child = child.next) {
     const node = transformNode(child)

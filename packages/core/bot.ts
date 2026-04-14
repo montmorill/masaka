@@ -1,6 +1,6 @@
 import type { Element } from '@yak/element'
-import type { Event, List, Login, Response, SendOptions, Upload, User } from '@yak/protocol'
-import type { Context, Logger } from 'cordis'
+import type { Event, List, Login, Message, Response, SendOptions, Upload, User } from '@yak/protocol'
+import type { Context, Disposable, Logger } from 'cordis'
 import type { Dict } from 'cosmokit'
 import type { Adapter } from './adapter'
 import type { ExtractParams, InternalRequest } from './internal'
@@ -76,18 +76,18 @@ export abstract class Bot<C extends Context = Context, T = any> {
     })
   }
 
-  getInternalUrl(path: string, init?: ConstructorParameters<typeof URLSearchParams>[0], slash?: boolean) {
+  getInternalUrl(path: string, init?: ConstructorParameters<typeof URLSearchParams>[0], slash?: boolean): string {
     let search = new URLSearchParams(init).toString()
     if (search)
       search = `?${search}`
     return `internal${slash ? '/' : ':'}${this.platform}/${this.selfId}${path}${search}`
   }
 
-  defineInternalRoute<P extends string>(path: P, callback: (request: InternalRequest<C, ExtractParams<P>>) => Promise<Response>) {
+  defineInternalRoute<P extends string>(path: P, callback: (request: InternalRequest<C, ExtractParams<P>>) => Promise<Response>): Disposable {
     return this._internalRouter.define(path, callback)
   }
 
-  update(login: Login) {
+  update(login: Login): void {
     // make sure `status` is the last property to be assigned
     // so that `login-updated` event can be dispatched after all properties are updated
     const { sn, status, ...rest } = login
@@ -95,7 +95,7 @@ export abstract class Bot<C extends Context = Context, T = any> {
     this.status = status
   }
 
-  dispose() {
+  dispose(): Promise<void> {
     const index = this.ctx.bots.findIndex(bot => bot.sid === this.sid)
     if (index >= 0) {
       this.ctx.bots.splice(index, 1)
@@ -104,18 +104,18 @@ export abstract class Bot<C extends Context = Context, T = any> {
     return this.stop()
   }
 
-  private dispatchLoginEvent(type: string) {
+  private dispatchLoginEvent(type: string): void {
     const session = this.session()
     session.type = type
     session.event.login = this.toJSON()
     this.dispatch(session)
   }
 
-  get status() {
+  get status(): Status {
     return this._status
   }
 
-  set status(value) {
+  set status(value: Status) {
     if (value === this._status)
       return
     this._status = value
@@ -124,21 +124,21 @@ export abstract class Bot<C extends Context = Context, T = any> {
     }
   }
 
-  get isActive() {
+  get isActive(): boolean {
     return this._status !== Status.OFFLINE && this._status !== Status.DISCONNECT
   }
 
-  online() {
+  online(): void {
     this.status = Status.ONLINE
     this.error = undefined
   }
 
-  offline(error?: Error) {
+  offline(error?: Error): void {
     this.status = Status.OFFLINE
     this.error = error
   }
 
-  async start() {
+  async start(): Promise<void> {
     if (this.isActive)
       return
     this.status = Status.CONNECT
@@ -151,7 +151,7 @@ export abstract class Bot<C extends Context = Context, T = any> {
     }
   }
 
-  async stop() {
+  async stop(): Promise<void> {
     if (!this.isActive)
       return
     this.status = Status.DISCONNECT
@@ -167,7 +167,7 @@ export abstract class Bot<C extends Context = Context, T = any> {
     }
   }
 
-  get sid() {
+  get sid(): string {
     return `${this.platform}:${this.selfId}`
   }
 
@@ -175,7 +175,7 @@ export abstract class Bot<C extends Context = Context, T = any> {
     return new Session(this, event)
   }
 
-  dispatch(session: C[typeof Context.session]) {
+  dispatch(session: C[typeof Context.session]): void {
     if (!this.ctx.lifecycle.isActive)
       return
     let events = [session.type]
@@ -196,19 +196,19 @@ export abstract class Bot<C extends Context = Context, T = any> {
     }
   }
 
-  async createMessage(channelId: string, element: Element, referrer?: any, options?: SendOptions) {
+  async createMessage(channelId: string, element: Element, referrer?: any, options?: SendOptions): Promise<Message[]> {
     const { MessageEncoder } = this.constructor as typeof Bot
     const encoder = new MessageEncoder!(this, channelId, referrer, options)
     await encoder.render(element)
     return encoder.send()
   }
 
-  async sendMessage(channelId: string, element: Element, referrer?: any, options?: SendOptions) {
+  async sendMessage(channelId: string, element: Element, referrer?: any, options?: SendOptions): Promise<string[]> {
     const messages = await this.createMessage(channelId, element, referrer, options)
     return messages.map(message => message.id).filter(isNonNullable)
   }
 
-  async sendPrivateMessage(userId: string, element: Element, guildId?: string, options?: SendOptions) {
+  async sendPrivateMessage(userId: string, element: Element, guildId?: string, options?: SendOptions): Promise<string[]> {
     const { id } = await this.createDirectChannel(userId, guildId ?? options?.session?.guildId)
     return this.sendMessage(id, element, null, options)
   }
@@ -230,7 +230,7 @@ export abstract class Bot<C extends Context = Context, T = any> {
       ids.push(id)
     }
 
-    const dispose = () => {
+    const dispose = (): void => {
       // eslint-disable-next-line ts/no-use-before-define, style/max-statements-per-line
       _dispose(); clearTimeout(timer)
       for (const id of ids) {
@@ -242,15 +242,9 @@ export abstract class Bot<C extends Context = Context, T = any> {
     return ids.map(id => this.getInternalUrl(`/_tmp/${id}`))
   }
 
-  async supports(name: string, _session: Partial<C[typeof Context.session]> = {}) {
+  async supports(name: string, _session: Partial<C[typeof Context.session]> = {}): Promise<boolean> {
     // @ts-ignore
     return !!this[Methods[name]?.name]
-  }
-
-  async checkPermission(name: string, session: Partial<C[typeof Context.session]>) {
-    if (name.startsWith('bot.')) {
-      return this.supports(name.slice(4), session)
-    }
   }
 
   toJSON(): Login {
@@ -260,7 +254,7 @@ export abstract class Bot<C extends Context = Context, T = any> {
     })
   }
 
-  async getLogin() {
+  async getLogin(): Promise<Login> {
     return this.toJSON()
   }
 }
@@ -280,7 +274,7 @@ for (const name of iterableMethods) {
     let list: List<any>
     if (!this[`${name}List`])
       throw new Error(`not implemented: ${name}List`)
-    const getList = async () => {
+    const getList = async (): Promise<void> => {
       // @ts-ignore
       list = await this[`${name}List`](...args, list?.next)
       // `bot.getMessageList()` returns messages in ascending order

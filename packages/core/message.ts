@@ -16,12 +16,12 @@ export abstract class MessageEncoder<C extends Context = Context, B extends Bot<
 
   constructor(public bot: B, public channelId: string, public referrer?: any, public options: SendOptions = {}) {}
 
-  async prepare() {}
+  async prepare(): Promise<void> {}
 
   abstract flush(): Promise<void>
   abstract visit(element: Element): Promise<void>
 
-  async render(content: Element, flush?: boolean) {
+  async render(content: Element, flush?: boolean): Promise<void> {
     if (content)
       await this.visit(content)
     if (flush) {
@@ -29,7 +29,7 @@ export abstract class MessageEncoder<C extends Context = Context, B extends Bot<
     }
   }
 
-  async send() {
+  async send(): Promise<Message[]> {
     this.session = this.bot.session({
       type: 'send',
       channel: { id: this.channelId, ...this.options.session?.event.channel } as Channel,
