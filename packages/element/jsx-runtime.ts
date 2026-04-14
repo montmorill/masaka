@@ -1,6 +1,7 @@
 import type { InspectOptions } from 'node:util'
 import type { FormatterOptions } from './formatter'
 import util from 'node:util'
+import { isPlainObject } from 'cosmokit'
 import { BufferFormatter } from './formatter'
 
 declare global {
@@ -20,11 +21,15 @@ export const Fragment = 'template'
 export type Fragment = Element | object | string | number | bigint
 export type MaybeFragment = Fragment | false | null | undefined
 
+type ElementInit<T extends keyof JSX.IntrinsicElements = keyof JSX.IntrinsicElements> =
+  | [attrs: JSX.IntrinsicElements[T], ...children: MaybeFragment[]]
+  | Partial<JSX.IntrinsicElements[T]> extends JSX.IntrinsicElements[T] ? MaybeFragment[] : never
+
 export class Element<T extends keyof JSX.IntrinsicElements = keyof JSX.IntrinsicElements> {
   constructor(
     readonly type: T,
-    readonly attrs: JSX.IntrinsicElements[T],
-    readonly children: Fragment[],
+    readonly attrs = {} as JSX.IntrinsicElements[T],
+    readonly children: Fragment[] = [],
   ) {}
 
   toString(opts?: InspectOptions & Omit<FormatterOptions, 'print'>) {
@@ -33,27 +38,15 @@ export class Element<T extends keyof JSX.IntrinsicElements = keyof JSX.Intrinsic
     return formatter.buffer
   }
 
-  [util.inspect.custom](_depth: number | null | undefined, opts: InspectOptions) {
+  [util.inspect.custom](_: any, opts: InspectOptions) {
     return this.toString(opts)
   }
 }
 
-type IsNullSafeObject<T> = keyof T extends never ? true : Partial<T> extends T ? true : false
-
-function isPlainObject(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === 'object'
-    && Object.getPrototypeOf(value) === Object.prototype
-}
-
-function h<T extends keyof JSX.IntrinsicElements>(
-  type: T,
-  ...args: IsNullSafeObject<JSX.IntrinsicElements[T]> extends true
-    ? MaybeFragment[] | [attrs: JSX.IntrinsicElements[T], ...children: MaybeFragment[]]
-    : [attrs: JSX.IntrinsicElements[T], ...children: MaybeFragment[]]
-): Element<T> {
+function h<T extends keyof JSX.IntrinsicElements>(type: T, ...args: ElementInit<T>): Element<T> {
   let attrs = {} as JSX.IntrinsicElements[T]
 
-  if (args.length > 0 && !(args[0] instanceof Element) && isPlainObject(args[0])) {
+  if (args.length > 0 && isPlainObject(args[0])) {
     attrs = args.shift() as JSX.IntrinsicElements[T]
   }
 

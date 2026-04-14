@@ -1,5 +1,5 @@
 import type { XOR } from 'ts-xor'
-import h, { Fragment } from './jsx-runtime'
+import h, { Element, Fragment } from './jsx-runtime'
 import { markdown } from './markdown'
 
 declare global {
@@ -14,8 +14,9 @@ declare global {
   }
 }
 
-export function raw(strings: TemplateStringsArray, ...values: Fragment[]) {
+function raw(strings: TemplateStringsArray, ...values: Fragment[]) {
   return h.template(strings.flatMap((s, i) => values[i] ? [s, values[i]] : [s]).flat())
 }
 
-export default Object.assign(h, { Fragment, raw, markdown })
+export { Element, Fragment, markdown, raw }
+export default Object.assign(h, { Element, Fragment, markdown, raw })
