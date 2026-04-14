@@ -1,5 +1,5 @@
 {
-  "name": "yak",
+  "name": "@yak/workspace",
   "type": "module",
   "private": true,
   "packageManager": "bun@1.3.10",
@@ -7,6 +7,10 @@
     "packages/*",
     "adapters/*"
   ],
+  "scripts": {
+    "lint": "eslint .",
+    "lint:fix": "eslint --fix ."
+  },
   "dependencies": {
     "@yak/adapter-qq": "workspace:*",
     "@yak/core": "workspace:*",

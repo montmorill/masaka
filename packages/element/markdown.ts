@@ -58,8 +58,8 @@ const TRANSFORMERS: Record<NodeType, (node: Node) => Fragment> = {
   code_block: node => h.codeblock({ lang: node.info ?? undefined }, esacpeSlot(node.literal!)),
   html_block: node => esacpeSlot(node.literal!),
   thematic_break: () => h.hr(),
-  custom_inline: node => { throw new Error(`Function ${node.type} not implemented.`) },
-  custom_block: node => { throw new Error(`Function ${node.type} not implemented.`) },
+  custom_inline: (node) => { throw new Error(`Function ${node.type} not implemented.`) },
+  custom_block: (node) => { throw new Error(`Function ${node.type} not implemented.`) },
 }
 
 function transformNode(node: Node): Fragment {
