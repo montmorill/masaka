@@ -115,5 +115,5 @@ function esacpeSlot(...children: [Fragment]): Fragment {
     }
   }
 
-  return children.length === 1 ? children[0] : h.template(children)
+  return children.length === 1 ? children[0] : h.template(...children)
 }

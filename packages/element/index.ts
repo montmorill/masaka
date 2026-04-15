@@ -5,6 +5,7 @@ import { markdown } from './markdown'
 declare global {
   namespace JSX {
     interface IntrinsicElements {
+      text: object
       mention: XOR<
         { everyone: true },
         { user: string },
@@ -14,8 +15,8 @@ declare global {
   }
 }
 
-function raw(strings: TemplateStringsArray, ...values: Fragment[]): Fragment {
-  return h.template(strings.flatMap((s, i) => values[i] ? [s, values[i]] : [s]).flat())
+function raw(strings: TemplateStringsArray, ...values: Fragment[]): Element {
+  return h.template(...strings.flatMap((s, i) => values[i] ? [s, values[i]] : [s]).flat())
 }
 
 export { Element, Fragment, markdown, raw }

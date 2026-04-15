@@ -4,6 +4,8 @@ import util from 'node:util'
 import { isPlainObject } from 'cosmokit'
 import { BufferFormatter } from './formatter'
 
+export const Fragment = 'template'
+
 declare global {
   namespace JSX {
     type Element = InstanceType<{
@@ -11,14 +13,12 @@ declare global {
     }[keyof JSX.IntrinsicElements]>
 
     interface IntrinsicElements {
-      template: object
+      [Fragment]: object
     }
   }
 }
 
-export const Fragment = 'template'
-
-export type Fragment = Element | object | string | number | bigint
+export type Fragment = Element | string
 export type MaybeFragment = Fragment | false | null | undefined
 
 type ElementInit<T extends keyof JSX.IntrinsicElements = keyof JSX.IntrinsicElements> =
@@ -46,7 +46,7 @@ export class Element<T extends keyof JSX.IntrinsicElements = keyof JSX.Intrinsic
 function h<T extends keyof JSX.IntrinsicElements>(type: T, ...args: ElementInit<T>): Element<T> {
   let attrs = {} as JSX.IntrinsicElements[T]
 
-  if (args.length > 0 && isPlainObject(args[0])) {
+  if (args.length > 0 && isPlainObject(args[0]) && !(args[0] instanceof Element)) {
     attrs = args.shift() as JSX.IntrinsicElements[T]
   }
 
