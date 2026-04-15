@@ -21,9 +21,11 @@ declare global {
 export type Fragment = Element | string
 export type MaybeFragment = Fragment | false | null | undefined
 
+type IsNullable<T> = Partial<T> extends T ? true : false
+
 type ElementInit<T extends keyof JSX.IntrinsicElements = keyof JSX.IntrinsicElements> =
+  (IsNullable<JSX.IntrinsicElements[T]> extends true ? MaybeFragment[] : never)
   | [attrs: JSX.IntrinsicElements[T], ...children: MaybeFragment[]]
-  | Partial<JSX.IntrinsicElements[T]> extends JSX.IntrinsicElements[T] ? MaybeFragment[] : never
 
 export class Element<T extends keyof JSX.IntrinsicElements = keyof JSX.IntrinsicElements> {
   constructor(

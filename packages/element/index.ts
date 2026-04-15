@@ -5,7 +5,7 @@ import { markdown } from './markdown'
 declare global {
   namespace JSX {
     interface IntrinsicElements {
-      text: object
+      text: { content: string }
       mention: XOR<
         { everyone: true },
         { user: string },
