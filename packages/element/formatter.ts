@@ -1,17 +1,6 @@
 import type { InspectOptions } from 'node:util'
-import { inspect } from 'node:util'
+import util, { inspect } from 'node:util'
 import { Element, Fragment } from './jsx-runtime'
-
-const COLORS = {
-  black: 30,
-  red: 31,
-  green: 32,
-  yellow: 33,
-  blue: 34,
-  magenta: 35,
-  cyan: 36,
-  white: 37,
-} as const
 
 export interface FormatterOptions {
   indent?: string
@@ -40,12 +29,12 @@ export class Formatter {
     this.needLine = false
   }
 
-  colored(color: keyof typeof COLORS, data: any): string {
-    return this.opts.colors ? `\x1B[${COLORS[color]}m${data}\x1B[0m` : data
+  styled(format: Parameters<typeof util.styleText>[0], data: any): string {
+    return this.opts.colors ? util.styleText(format, data) : data
   }
 
   string(value: string): void {
-    this.print(`"${this.colored('green', value.replaceAll('"', '\\"'))}"`)
+    this.print(`"${this.styled('green', value.replaceAll('"', '\\"'))}"`)
   }
 
   indented(value: string): void {
@@ -64,7 +53,7 @@ export class Formatter {
 
   attrs(attrs: Record<string, any>): void {
     for (const [key, value] of Object.entries(attrs)) {
-      this.print(` ${this.colored('red', key)}`)
+      this.print(` ${this.styled('red', key)}`)
       if (value === true)
         continue
       this.print('=')
@@ -76,7 +65,7 @@ export class Formatter {
   }
 
   element(element: Element): void {
-    const tag = this.colored('green', element.type === Fragment ? '' : element.type)
+    const tag = this.styled('green', element.type === Fragment ? '' : element.type)
     if (this.needLine)
       this.newLine()
     this.print(`<${tag}`)
