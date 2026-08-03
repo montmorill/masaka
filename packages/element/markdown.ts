@@ -2,7 +2,6 @@ import type { Node, NodeType } from 'commonmark'
 import type { Fragment } from './jsx-runtime'
 import { Parser } from 'commonmark'
 import h from './jsx-runtime'
-import { stripNulls } from './strip-nulls'
 import { replace, transform } from './utils'
 
 const PUA_START = 0xE000
@@ -52,6 +51,16 @@ declare global {
   }
 }
 
+function filterNulls<T extends Record<string, any>>(object: T): {
+  [K in keyof T as null extends T[K] ? K : never]?: Exclude<T[K], null>
+} extends infer U ? Omit<T, keyof U> & U : never {
+  for (const key in object) {
+    if (object[key] === null)
+      delete object[key]
+  }
+  return object as any
+}
+
 const TRANSFORMERS: Record<NodeType, (node: Node) => Fragment> = {
   text: node => (node.literal!),
   softbreak: () => ' ',
@@ -59,8 +68,8 @@ const TRANSFORMERS: Record<NodeType, (node: Node) => Fragment> = {
   emph: node => h.italic(...transformChildren(node)),
   strong: node => h.bold(...transformChildren(node)),
   html_inline: node => (node.literal!),
-  link: node => h.link(stripNulls({ href: node.destination!, title: node.title }), ...transformChildren(node)),
-  image: node => h.image(stripNulls({ src: node.destination!, title: node.title }), ...transformChildren(node)),
+  link: node => h.link(filterNulls({ href: node.destination!, title: node.title }), ...transformChildren(node)),
+  image: node => h.image(filterNulls({ src: node.destination!, title: node.title }), ...transformChildren(node)),
   code: node => h.code((node.literal!)),
   document: node => h.template(...transformChildren(node)),
   paragraph: node => h.paragraph(...transformChildren(node)),
@@ -68,7 +77,7 @@ const TRANSFORMERS: Record<NodeType, (node: Node) => Fragment> = {
   item: node => h.item(...transformChildren(node)),
   list: node => h.list({ ordered: node.listType === 'ordered' }, ...transformChildren(node)),
   heading: node => h.heading({ level: node.level }, ...transformChildren(node)),
-  code_block: node => h.codeblock(stripNulls({ info: node.info }), node.literal!),
+  code_block: node => h.codeblock(filterNulls({ info: node.info }), node.literal!),
   html_block: node => node.literal!,
   thematic_break: () => h.divider(),
   custom_inline: () => { throw new Error(`Function custom_inline is not implemented.`) },
