@@ -1,6 +1,6 @@
 import type { InspectOptions } from 'node:util'
 import type { FormatterOptions } from './formatter'
-import type { IsNullable, Overloads, Pretty, Xor } from './types'
+import type { Overloads, Pretty, Xor } from './types'
 import util from 'node:util'
 import { isPlainObject } from 'cosmokit'
 import { BufferFormatter } from './formatter'
@@ -17,8 +17,8 @@ type ElementChildren<T extends keyof JSX.IntrinsicElements> =
   JSX.IntrinsicElements[T] extends { children: infer C extends any[] } ? C : MaybeFragment[]
 
 type ElementInit<T extends keyof JSX.IntrinsicElements = keyof JSX.IntrinsicElements> =
-  | (IsNullable<ElementProps<T>> extends true ? ElementChildren<T> : never)
   | [attrs: ElementProps<T>, ...children: ElementChildren<T>]
+  | (Partial<ElementProps<T>> extends ElementProps<T> ? ElementChildren<T> : never)
 
 export interface Elements {}
 
