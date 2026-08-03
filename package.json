@@ -12,14 +12,12 @@
     "lint:fix": "eslint --fix ."
   },
   "dependencies": {
-    "@yak/adapter-qq": "workspace:*",
-    "@yak/core": "workspace:*",
-    "@yak/element": "workspace:*"
+    "@yak/element": "workspace:^"
   },
   "devDependencies": {
-    "@antfu/eslint-config": "^8.2.0",
-    "@types/node": "^25.6.0",
-    "eslint": "^9",
-    "typescript": "^5"
+    "@antfu/eslint-config": "^9.2.0",
+    "@types/node": "^26.1.2",
+    "eslint": "^10.8.0",
+    "typescript": "^5.9.3"
   }
 }
