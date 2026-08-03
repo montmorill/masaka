@@ -1,4 +1,3 @@
-import type { Awaitable } from 'cosmokit'
 import h from './jsx-runtime'
 import * as utils from './utils'
 
@@ -10,7 +9,6 @@ declare module './jsx-runtime' {
     mention(attrs: { everyone: true }): Element<'mention'>
     mention(attrs: { user: string }): Element<'mention'>
     mention(attrs: { channel: string }): Element<'mention'>
-    stream: { children: Awaitable<MaybeFragment>[] }
   }
 }
 
