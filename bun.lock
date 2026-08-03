@@ -3,9 +3,9 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "@yak/workspace",
+      "name": "@ayrk/workspace",
       "dependencies": {
-        "@yak/element": "workspace:^",
+        "@ayrk/element": "workspace:^",
       },
       "devDependencies": {
         "@antfu/eslint-config": "^9.2.0",
@@ -15,7 +15,7 @@
       },
     },
     "packages/element": {
-      "name": "@yak/element",
+      "name": "@ayrk/element",
       "version": "0.0.0",
       "dependencies": {
         "commonmark": "^0.31.2",
@@ -145,7 +145,7 @@
 
     "@vue/shared": ["@vue/shared@3.5.40", "", {}, "sha512-WxnBtruIqOoV3rA4jeKDWzrYI5h7Cp4+pjwDi8kWGHz+IslhiN+wguLVVhtv2l8VoU02rzDCVfDjgCl1lNpZVg=="],
 
-    "@yak/element": ["@yak/element@workspace:packages/element"],
+    "@ayrk/element": ["@ayrk/element@workspace:packages/element"],
 
     "acorn": ["acorn@8.18.0", "", { "bin": { "acorn": "bin/acorn" } }, "sha512-lGq+9yr1/GuAWaVYIHRjvvySG5/4VfKIvC8EWxStPdcDh/Ka7FG3twP6v4d5BkravUilhIAsG4Qj83t02LWUPQ=="],
 
