@@ -1,6 +1,5 @@
 import type { Awaitable } from 'cosmokit'
 import h from './jsx-runtime'
-import { markdown } from './markdown'
 import * as utils from './utils'
 
 export * from './jsx-runtime'
@@ -15,4 +14,4 @@ declare module './jsx-runtime' {
   }
 }
 
-export default Object.assign(h, { markdown, ...utils })
+export default Object.assign(h, utils)

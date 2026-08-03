@@ -1,6 +1,8 @@
 import type { Fragment } from './jsx-runtime'
 import h, { Element } from './jsx-runtime'
 
+export { markdown } from './markdown'
+
 export function pack(...children: Fragment[]): Fragment {
   return children.length === 1 ? children[0]! : h.template(...children)
 }
