@@ -17,12 +17,12 @@ export function markdown(strings: TemplateStringsArray, ...values: Fragment[]): 
 
 export interface MarkdownElement {
   newline: object
-  i: object
-  b: object
+  italic: object
+  bold: object
   link: { href: string, title?: string }
   image: { src: string, title?: string }
   code: object
-  p: object
+  paragraph: object
   blockquote: object
   item: object
   list: { ordered?: boolean }
@@ -41,14 +41,14 @@ const TRANSFORMERS: Record<NodeType, (node: Node) => Fragment> = {
   text: node => esacpeSlot(node.literal!),
   softbreak: () => ' ',
   linebreak: () => h.newline(),
-  emph: node => h.i(...transformChildren(node)),
-  strong: node => h.b(...transformChildren(node)),
+  emph: node => h.italic(...transformChildren(node)),
+  strong: node => h.bold(...transformChildren(node)),
   html_inline: node => esacpeSlot(node.literal!),
   link: node => h.link(stripNulls({ href: node.destination!, title: node.title }), ...transformChildren(node)),
   image: node => h.image(stripNulls({ src: node.destination!, title: node.title }), ...transformChildren(node)),
   code: node => h.code(esacpeSlot(node.literal!)),
   document: node => h.template(...transformChildren(node)),
-  paragraph: node => h.p(...transformChildren(node)),
+  paragraph: node => h.paragraph(...transformChildren(node)),
   block_quote: node => h.blockquote(...transformChildren(node)),
   item: node => h.item(...transformChildren(node)),
   list: node => h.list({ ordered: node.listType === 'ordered' }, ...transformChildren(node)),
