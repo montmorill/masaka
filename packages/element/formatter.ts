@@ -20,7 +20,7 @@ export class Formatter {
     }
   }
 
-  nest(): Formatter {
+  nested(): Formatter {
     return new Formatter(this.print, {
       ...this.opts,
       indent: `${this.opts.indent ?? ''}  `,
@@ -85,7 +85,7 @@ export class Formatter {
         this.node(element.children[0]!)
       }
       else {
-        const nested = this.nest()
+        const nested = this.nested()
         nested.newLine()
         for (const child of element.children) {
           nested.node(child)
