@@ -10,19 +10,26 @@ export const Fragment = 'template'
 export type Fragment = Element | string
 export type MaybeFragment = Fragment | false | null | undefined
 
-type ElementProps<T extends keyof JSX.IntrinsicElements> =
+type ElementAttrs<T extends keyof JSX.IntrinsicElements> =
   Omit<JSX.IntrinsicElements[T], 'children'>
 
 type ElementChildren<T extends keyof JSX.IntrinsicElements> =
   JSX.IntrinsicElements[T] extends { children: infer C extends any[] } ? C : MaybeFragment[]
 
 type ElementInit<T extends keyof JSX.IntrinsicElements = keyof JSX.IntrinsicElements> =
-  | [attrs: ElementProps<T>, ...children: ElementChildren<T>]
-  | (Partial<ElementProps<T>> extends ElementProps<T> ? ElementChildren<T> : never)
+  | [attrs: ElementAttrs<T>, ...children: ElementChildren<T>]
+  | (Partial<ElementAttrs<T>> extends ElementAttrs<T> ? ElementChildren<T> : never)
 
-export interface Elements {}
+export interface Elements {
+  mention(attrs: { everyone: true }): Element<'mention'>
+  mention(attrs: { user: string }): Element<'mention'>
+  mention(attrs: { channel: string }): Element<'mention'>
+  button(attrs: { text: string }): Element<'button'>
+  button(attrs: { href: string }): Element<'button'>
+  button(attrs: { action: string }): Element<'button'>
+}
 
-type ResolvedElements = {
+type ExtractedElements = {
   [K in keyof Elements]: Pretty<Xor<
     Elements[K] extends (...args: any[]) => any
       ? Parameters<Overloads<Elements[K]>> extends [infer F, ...infer R]
@@ -33,15 +40,23 @@ type ResolvedElements = {
   >>
 }
 
+export interface ElementProps {
+  link: { href: string, title?: string }
+  audio: { src: string, title?: string }
+  image: { src: string, title?: string }
+  video: { src: string, title?: string }
+  file: { src: string, title?: string }
+}
+
+type MergedElements = {
+  [K in keyof ExtractedElements]: K extends keyof ElementProps
+    ? Pretty<ExtractedElements[K] & ElementProps[K]> : ExtractedElements[K]
+} & Omit<ElementProps, keyof ExtractedElements>
+
 declare global {
   namespace JSX {
-    interface IntrinsicElements extends ResolvedElements {
+    interface IntrinsicElements extends MergedElements {
       [Fragment]: object
-      link: { href: string, title?: string }
-      audio: { src: string, title?: string }
-      image: { src: string, title?: string }
-      video: { src: string, title?: string }
-      file: { src: string, title?: string }
     }
 
     type Element = InstanceType<{
@@ -53,7 +68,7 @@ declare global {
 export class Element<T extends keyof JSX.IntrinsicElements = keyof JSX.IntrinsicElements> {
   constructor(
     public type: T,
-    public attrs: ElementProps<T>,
+    public attrs: ElementAttrs<T>,
     public children: Fragment[] = [],
   ) {}
 
@@ -69,7 +84,7 @@ export class Element<T extends keyof JSX.IntrinsicElements = keyof JSX.Intrinsic
 }
 
 function h<T extends keyof JSX.IntrinsicElements>(type: T, ...args: ElementInit<T>): Element<T> {
-  let attrs = {} as ElementProps<T>
+  let attrs = {} as ElementAttrs<T>
   if (args.length > 0 && isPlainObject(args[0]) && !(args[0] instanceof Element)) {
     attrs = args.shift()
   }
