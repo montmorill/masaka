@@ -2,6 +2,7 @@ import type { Node, NodeType } from 'commonmark'
 import type { Fragment } from './jsx-runtime'
 import { Parser } from 'commonmark'
 import h, { Element } from './jsx-runtime'
+import { stripNulls } from './strip-nulls'
 import { pack } from './utils'
 
 const parser = new Parser()
@@ -18,14 +19,15 @@ export function markdown(strings: TemplateStringsArray, ...values: Fragment[]): 
 
 export interface MarkdownElement {
   br: object
-  emph: object
-  strong: object
-  link: { href: string, title?: string }
-  image: { src: string, title?: string }
-  code: object
-  paragraph: object
+  i: object
+  b: object
+  a: { href: string, title?: string }
+  img: { alt: string, src: string, title?: string }
+  code: { block?: boolean }
+  p: object
   blockquote: object
-  list: { ordered?: boolean, start?: number, delimiter?: ')' | '.' }
+  list: { type: 'ordered' | 'bullet' }
+  li: object
   heading: { level: number }
   codeblock: { info?: string }
   hr: object
@@ -45,33 +47,19 @@ const TRANSFORMERS: Record<NodeType, (node: Node) => Fragment> = {
   text: node => esacpeSlot(node.literal!),
   softbreak: () => ' ',
   linebreak: () => h.br(),
-  emph: node => h.emph(...transformChildren(node)),
-  strong: node => h.strong(...transformChildren(node)),
+  emph: node => h.i(...transformChildren(node)),
+  strong: node => h.b(...transformChildren(node)),
   html_inline: node => esacpeSlot(node.literal!),
-  link: node => h.link({
-    href: node.destination!,
-    title: node.title ?? undefined,
-  }, ...transformChildren(node)),
-  image: node => h.image({
-    src: node.destination!,
-    title: node.title ?? undefined,
-  }, ...transformChildren(node)),
+  link: node => h.a(stripNulls({ href: node.destination!, title: node.title }), ...transformChildren(node)),
+  image: node => h.img(stripNulls({ alt: node.literal!, src: node.destination!, title: node.title }), ...transformChildren(node)),
   code: node => h.code(esacpeSlot(node.literal!)),
   document: node => h.template(...transformChildren(node)),
-  paragraph: node => h.paragraph(...transformChildren(node)),
+  paragraph: node => h.p(...transformChildren(node)),
   block_quote: node => h.blockquote(...transformChildren(node)),
-  item: node => pack(...transformChildren(node)),
-  list: node => h.list({
-    ordered: node.listType === 'ordered',
-    start: node.listStart,
-    delimiter: node.listDelimiter,
-  }, ...transformChildren(node)),
-  heading: node => h.heading({
-    level: node.level,
-  }, ...transformChildren(node)),
-  code_block: node => h.codeblock({
-    info: node.info ?? undefined,
-  }, esacpeSlot(node.literal!)),
+  item: node => h.li(...transformChildren(node)),
+  list: node => h.list({ type: node.listType }, ...transformChildren(node)),
+  heading: node => h.heading({ level: node.level }, ...transformChildren(node)),
+  code_block: node => h.codeblock({ info: node.info ?? undefined }, esacpeSlot(node.literal!)),
   html_block: node => esacpeSlot(node.literal!),
   thematic_break: () => h.hr(),
   custom_inline: unimplemented,

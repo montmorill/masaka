@@ -2,8 +2,8 @@
 
 import h from '@yak/element'
 
-const satori = <link href="https://satori.chat/">Satori</link>
-const koishi = <link href="https://koishi.chat/">Koishi</link>
+const satori = <a href="https://satori.chat/">Satori</a>
+const koishi = <a href="https://koishi.chat/">Koishi</a>
 
 console.log(h.markdown`
 # Hello, ${<mention everyone />}!
