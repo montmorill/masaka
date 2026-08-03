@@ -5,32 +5,30 @@ import h, { Element } from './jsx-runtime'
 import { stripNulls } from './strip-nulls'
 import { pack } from './utils'
 
-const parser = new Parser()
-
 let slotValues: Fragment[] = []
 
 export function markdown(strings: TemplateStringsArray, ...values: Fragment[]): Fragment {
   slotValues = values
   const markdownText = strings.reduce((res, str, i) =>
     res + str + (i < slotValues.length ? `<slot>${i}</slot>` : ''), '')
-  const ast = parser.parse(markdownText)
+  const ast = new Parser().parse(markdownText)
   return transformNode(ast)
 }
 
 export interface MarkdownElement {
-  br: object
+  newline: object
   i: object
   b: object
-  a: { href: string, title?: string }
-  img: { alt: string, src: string, title?: string }
-  code: { block?: boolean }
+  link: { href: string, title?: string }
+  image: { src: string, title?: string }
+  code: object
   p: object
   blockquote: object
-  list: { type: 'ordered' | 'bullet' }
-  li: object
+  item: object
+  list: { ordered?: boolean }
   heading: { level: number }
   codeblock: { info?: string }
-  hr: object
+  divider: object
 }
 
 declare global {
@@ -39,31 +37,27 @@ declare global {
   }
 }
 
-function unimplemented(node: Node): Fragment {
-  throw new Error(`Function ${node.type} not implemented.`)
-}
-
 const TRANSFORMERS: Record<NodeType, (node: Node) => Fragment> = {
   text: node => esacpeSlot(node.literal!),
   softbreak: () => ' ',
-  linebreak: () => h.br(),
+  linebreak: () => h.newline(),
   emph: node => h.i(...transformChildren(node)),
   strong: node => h.b(...transformChildren(node)),
   html_inline: node => esacpeSlot(node.literal!),
-  link: node => h.a(stripNulls({ href: node.destination!, title: node.title }), ...transformChildren(node)),
-  image: node => h.img(stripNulls({ alt: node.literal!, src: node.destination!, title: node.title }), ...transformChildren(node)),
+  link: node => h.link(stripNulls({ href: node.destination!, title: node.title }), ...transformChildren(node)),
+  image: node => h.image(stripNulls({ src: node.destination!, title: node.title }), ...transformChildren(node)),
   code: node => h.code(esacpeSlot(node.literal!)),
   document: node => h.template(...transformChildren(node)),
   paragraph: node => h.p(...transformChildren(node)),
   block_quote: node => h.blockquote(...transformChildren(node)),
-  item: node => h.li(...transformChildren(node)),
-  list: node => h.list({ type: node.listType }, ...transformChildren(node)),
+  item: node => h.item(...transformChildren(node)),
+  list: node => h.list({ ordered: node.listType === 'ordered' }, ...transformChildren(node)),
   heading: node => h.heading({ level: node.level }, ...transformChildren(node)),
-  code_block: node => h.codeblock({ info: node.info ?? undefined }, esacpeSlot(node.literal!)),
+  code_block: node => h.codeblock(stripNulls({ info: node.info }), esacpeSlot(node.literal!)),
   html_block: node => esacpeSlot(node.literal!),
-  thematic_break: () => h.hr(),
-  custom_inline: unimplemented,
-  custom_block: unimplemented,
+  thematic_break: () => h.divider(),
+  custom_inline: () => { throw new Error(`Function custom_inline is not implemented.`) },
+  custom_block: () => { throw new Error(`Function custom_block is not implemented.`) },
 }
 
 function transformNode(node: Node): Fragment {

@@ -37,6 +37,11 @@ declare global {
   namespace JSX {
     interface IntrinsicElements extends ResolvedElements {
       [Fragment]: object
+      link: { href: string, title?: string }
+      audio: { src: string, title?: string }
+      image: { src: string, title?: string }
+      video: { src: string, title?: string }
+      file: { src: string, title?: string }
     }
 
     type Element = InstanceType<{

@@ -2,8 +2,8 @@
 
 import h from '@ayrk/element'
 
-const satori = <a href="https://satori.chat/">Satori</a>
-const koishi = <a href="https://koishi.chat/">Koishi</a>
+const satori = <link href="https://satori.chat/">Satori</link>
+const koishi = <link href="https://koishi.chat/">Koishi</link>
 
 console.log(h.markdown`
 # Hello, ${<mention everyone />}!
