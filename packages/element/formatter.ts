@@ -13,7 +13,12 @@ export class Formatter {
   constructor(
     readonly print: (data: any) => void,
     readonly opts: InspectOptions & FormatterOptions = {},
-  ) {}
+  ) {
+    for (const key of Object.keys(util.inspect.defaultOptions)) {
+      if (!(key in this.opts)) // @ts-ignore
+        this.opts[key] = util.inspect.defaultOptions[key]
+    }
+  }
 
   nest(): Formatter {
     return new Formatter(this.print, {
