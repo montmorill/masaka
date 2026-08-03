@@ -70,7 +70,7 @@ const TRANSFORMERS: Record<NodeType, (node: Node) => Fragment> = {
   html_inline: node => (node.literal!),
   link: node => h.link(filterNulls({ href: node.destination!, title: node.title }), ...transformChildren(node)),
   image: node => h.image(filterNulls({ src: node.destination!, title: node.title }), ...transformChildren(node)),
-  code: node => h.code((node.literal!)),
+  code: node => h.code(node.literal!),
   document: node => h.template(...transformChildren(node)),
   paragraph: node => h.paragraph(...transformChildren(node)),
   block_quote: node => h.blockquote(...transformChildren(node)),

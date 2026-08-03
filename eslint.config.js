@@ -6,6 +6,7 @@ export default antfu({
   rules: {
     'multiline-ternary': 'off',
     'style/multiline-ternary': 'off',
+    'style/no-extra-parens': ['error'],
     'style/operator-linebreak': ['error', 'before', {
       overrides: {
         '=': 'after',

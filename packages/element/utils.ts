@@ -69,7 +69,7 @@ export function* replace(
   let lastIndex = 0
   pattern.lastIndex = 0
   // eslint-disable-next-line no-cond-assign
-  while ((match = pattern.exec(string)) !== null) {
+  while (match = pattern.exec(string)) {
     const matched = match[0]
     const index = match.index
     if (index > lastIndex)
