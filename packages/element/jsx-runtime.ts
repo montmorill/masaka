@@ -1,7 +1,6 @@
 import type { FormatOptions } from './formatter'
 import type { Merge, OptionalKeys, Overloads, Pretty, Xor } from './types'
 import util from 'node:util'
-import { isPlainObject } from 'cosmokit'
 import { BufferFormatter } from './formatter'
 
 export const Fragment = 'template'
@@ -102,7 +101,8 @@ export class Element<T extends keyof JSXElements = keyof JSXElements> {
   }
 
   update(...args: PartialElementInit<T>): this {
-    if (args.length > 0 && isPlainObject(args[0]) && !(args[0] instanceof Element))
+    const isPlainObject = args[0] && typeof args[0] === 'object' && !Array.isArray(args[0])
+    if (isPlainObject && !(args[0] instanceof Element))
       Object.assign(this.attrs, args.shift())
     this.children.push(...args.filter(Boolean))
     return this
