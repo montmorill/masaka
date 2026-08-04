@@ -9,15 +9,17 @@ export const Fragment = 'template'
 export type Fragment = Element | string
 export type MaybeFragment = Fragment | false | null | undefined
 
-type ElementChildren<T extends keyof JSXElements> =
-  JSXElements[T] extends { children: infer C extends any[] } ? C : MaybeFragment[]
+export type ElementChildren<T extends keyof JSXElements> =
+  ElementAttrs<T> extends { children: infer C extends any[] } ? C : MaybeFragment[]
 
-type ElementInit<T extends keyof JSXElements = keyof JSXElements> =
-  | [attrs: JSXElements[T], ...children: ElementChildren<T>]
-  | (Partial<JSXElements[T]> extends JSXElements[T] ? ElementChildren<T> : never)
+export type ElementAttrs<T extends keyof JSXElements> = Omit<JSXElements[T], 'children'>
 
-type PartialElementInit<T extends keyof JSXElements = keyof JSXElements> =
-  | [attrs: Partial<JSXElements[T]>, ...children: ElementChildren<T>]
+export type ElementInit<T extends keyof JSXElements = keyof JSXElements> =
+  | [attrs: ElementAttrs<T>, ...children: ElementChildren<T>]
+  | (Partial<ElementAttrs<T>> extends ElementAttrs<T> ? ElementChildren<T> : never)
+
+export type PartialElementInit<T extends keyof JSXElements = keyof JSXElements> =
+  | [attrs: Partial<ElementAttrs<T>>, ...children: ElementChildren<T>]
   | ElementChildren<T>
 
 export interface Elements {
@@ -43,14 +45,14 @@ export interface ElementProps {
   file: { src: string, title?: string }
 }
 
-type JSXElements = {
+export type JSXElements = {
   [K in keyof Elements]:
   K extends keyof ElementProps
     ? ExtractOverloadProps<K> & ElementProps[K]
     : ExtractOverloadProps<K>
 } & Omit<ElementProps, keyof Elements>
 
-type ElementType = {
+export type ElementType = {
   [K in keyof Elements]:
   ReturnType<Elements[K]> extends Element<infer T> ? T : never
 } & { [K in keyof Omit<JSXElements, keyof Elements>]: K }
@@ -66,17 +68,18 @@ declare global {
 }
 
 export class Element<T extends keyof JSXElements = keyof JSXElements> {
-  constructor(
-    public type: ElementType[T],
-    public attrs: JSXElements[T],
-    public children: Fragment[] = [],
-  ) {}
+  type: ElementType[T]
+  attrs: ElementAttrs<T> = {} as any
+  children: Fragment[] = []
+
+  constructor(type: ElementType[T], ...args: ElementInit<T>) {
+    this.type = type
+    this.update(...args)
+  }
 
   update(...args: PartialElementInit<T>): this {
-    let attrs = {} as JSXElements[T]
     if (args.length > 0 && isPlainObject(args[0]) && !(args[0] instanceof Element))
-      attrs = args.shift()
-    Object.assign(this.attrs, attrs)
+      Object.assign(this.attrs, args.shift())
     this.children.push(...args.filter(Boolean))
     return this
   }
@@ -95,10 +98,7 @@ export class Element<T extends keyof JSXElements = keyof JSXElements> {
 function h<T extends keyof JSXElements>(type: ElementType[T], ...args: ElementInit<T>): Element<T> {
   if (h.components[type]) // @ts-ignore
     return h.components[type](...args)
-  let attrs = {} as JSXElements[T]
-  if (args.length > 0 && isPlainObject(args[0]) && !(args[0] instanceof Element))
-    attrs = args.shift()
-  return new Element(type, attrs, args.filter(Boolean))
+  return new Element(type, ...args)
 }
 
 h.Element = Element
