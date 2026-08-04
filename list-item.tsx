@@ -6,8 +6,8 @@ import h, { Element } from '@yarkjs/element'
 declare module '@yarkjs/element' {
   interface OverwriteElementChildren {
     list: Fragment | Fragment[]
-    ol: Fragment | Fragment[]
     ul: Fragment | Fragment[]
+    ol: Fragment | Fragment[]
   }
 }
 
@@ -28,7 +28,7 @@ h.components.list = h.list = (...args) => new ListElement('list', ...args)
 
 console.log(
   <list>
-    <ol>item 1</ol>
-    <ul>item 2</ul>
+    <ul>item 1</ul>
+    <ol>item 2</ol>
   </list>,
 )
