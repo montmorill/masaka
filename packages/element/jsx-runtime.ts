@@ -24,7 +24,7 @@ type PartialElementInit<T extends keyof JSXElements = keyof JSXElements> =
   | [attrs: Partial<ElementAttrs<T>>, ...children: ElementChildren<T>]
   | ElementChildren<T>
 
-export interface ElementOverloads {
+export interface Elements {
   mention(attrs: { everyone: true }): Element<'mention'>
   mention(attrs: { user: string }): Element<'mention'>
   mention(attrs: { channel: string }): Element<'mention'>
@@ -33,9 +33,9 @@ export interface ElementOverloads {
   button(attrs: { action: string }): Element<'button'>
 }
 
-type ExtractOverloadProps<K extends keyof ElementOverloads> =
-  Pretty<Xor<ElementOverloads[K] extends (...args: any[]) => any
-    ? Parameters<Overloads<ElementOverloads[K]>> extends [infer A]
+type ExtractOverloadProps<K extends keyof Elements> =
+  Pretty<Xor<Elements[K] extends (...args: any[]) => any
+    ? Parameters<Overloads<Elements[K]>> extends [infer A]
       ? A extends Fragment ? object : A : object : never>>
 
 export interface ElementProps {
@@ -48,16 +48,16 @@ export interface ElementProps {
 }
 
 type JSXElements = {
-  [K in keyof ElementOverloads]:
+  [K in keyof Elements]:
   K extends keyof ElementProps
     ? ExtractOverloadProps<K> & ElementProps[K]
     : ExtractOverloadProps<K>
-} & Omit<ElementProps, keyof ElementOverloads>
+} & Omit<ElementProps, keyof Elements>
 
 type ElementType = {
-  [K in keyof ElementOverloads]:
-  ReturnType<ElementOverloads[K]> extends Element<infer T> ? T : never
-} & { [K in keyof Omit<JSXElements, keyof ElementOverloads>]: K }
+  [K in keyof Elements]:
+  ReturnType<Elements[K]> extends Element<infer T> ? T : never
+} & { [K in keyof Omit<JSXElements, keyof Elements>]: K }
 
 declare global {
   namespace JSX {

@@ -94,7 +94,7 @@ function transformChildren(node: Node): Fragment[] {
 }
 
 declare module '@ayrk/element' {
-  interface ElementOverloads {
+  interface Elements {
     h1(attrs: Omit<ElementProps['heading'], 'level'>): Element<'heading'>
     h2(attrs: Omit<ElementProps['heading'], 'level'>): Element<'heading'>
     h3(attrs: Omit<ElementProps['heading'], 'level'>): Element<'heading'>
