@@ -17,22 +17,6 @@ export type Overloads<F, Fp = unknown> =
         : never
     : never
 
-type IsAny<T> = 0 extends 1 & NoInfer<T> ? true : false
-
-type IsOptionalKeyOf<Type extends object, Key extends keyof Type> =
-  IsAny<Type | Key> extends true ? never
-    : Key extends keyof Type
-      ? Type extends Record<Key, Type[Key]>
-        ? false
-        : true
-      : false
-
-export type OptionalKeys<Type extends object> =
-  Type extends unknown // For distributing `Type`
-    ? (keyof { [Key in keyof Type as
-      IsOptionalKeyOf<Type, Key> extends false
-        ? never
-        : Key
-      ]: never
-    }) & keyof Type // Intersect with `keyof Type` to ensure result of `OptionalKeysOf<Type>` is always assignable to `keyof Type`
-    : never // Should never happen
+export type OptionalKeys<T> =
+  keyof { [K in keyof T as K extends keyof T
+    ? T extends Record<K, T[K]> ? never : K : never]: never }
