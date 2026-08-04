@@ -45,10 +45,8 @@ export interface MarkdownElement {
   divider: object
 }
 
-declare global {
-  namespace JSX {
-    interface IntrinsicElements extends MarkdownElement {}
-  }
+declare module '@ayrk/element' {
+  interface ElementProps extends MarkdownElement {}
 }
 
 function filterNulls<T extends Record<string, any>>(object: T): {
