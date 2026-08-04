@@ -97,6 +97,8 @@ export class Element<T extends keyof JSXElements = keyof JSXElements> {
 }
 
 function h<T extends keyof JSXElements>(type: ElementType[T], ...args: ElementInit<T>): Element<T> {
+  if (h.components[type]) // @ts-ignore
+    return h.components[type](...args)
   let attrs = {} as ElementAttrs<T>
   if (args.length > 0 && isPlainObject(args[0]) && !(args[0] instanceof Element))
     attrs = args.shift()
@@ -105,6 +107,9 @@ function h<T extends keyof JSXElements>(type: ElementType[T], ...args: ElementIn
 
 h.Element = Element
 h.Fragment = Fragment
+h.components = {} as {
+  [K in keyof JSXElements]?: (...args: ElementInit<K>) => Element<ElementType[K]>
+}
 
 export default new Proxy(h, {
   get(target, prop, receiver) {

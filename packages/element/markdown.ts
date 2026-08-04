@@ -1,5 +1,5 @@
 import type { Node, NodeType } from 'commonmark'
-import type { Fragment } from './jsx-runtime'
+import type { Element, Fragment } from './jsx-runtime'
 import { Parser } from 'commonmark'
 import h from './jsx-runtime'
 import { replace, transform } from './utils'
@@ -92,3 +92,21 @@ function transformChildren(node: Node): Fragment[] {
     children.push(transformNode(child))
   return children
 }
+
+declare module '@ayrk/element' {
+  interface ElementOverloads {
+    h1(attrs: Omit<ElementProps['heading'], 'level'>): Element<'heading'>
+    h2(attrs: Omit<ElementProps['heading'], 'level'>): Element<'heading'>
+    h3(attrs: Omit<ElementProps['heading'], 'level'>): Element<'heading'>
+    h4(attrs: Omit<ElementProps['heading'], 'level'>): Element<'heading'>
+    h5(attrs: Omit<ElementProps['heading'], 'level'>): Element<'heading'>
+    h6(attrs: Omit<ElementProps['heading'], 'level'>): Element<'heading'>
+  }
+}
+
+h.components.h1 = h.h1 = (...args) => h.heading({ level: 1 }).update(...args)
+h.components.h2 = h.h2 = (...args) => h.heading({ level: 2 }).update(...args)
+h.components.h3 = h.h3 = (...args) => h.heading({ level: 3 }).update(...args)
+h.components.h4 = h.h4 = (...args) => h.heading({ level: 4 }).update(...args)
+h.components.h5 = h.h5 = (...args) => h.heading({ level: 5 }).update(...args)
+h.components.h6 = h.h6 = (...args) => h.heading({ level: 6 }).update(...args)
