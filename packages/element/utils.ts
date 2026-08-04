@@ -20,20 +20,20 @@ export function raw(strings: TemplateStringsArray, ...values: Fragment[]): Fragm
 export function transform(
   fragment: Fragment,
   visitors:
-    & { text?: (text: string) => Iterable<Fragment> }
-    & { [K in keyof JSX.IntrinsicElements]?: (element: Element<K>) => Iterable<Fragment> },
-): Fragment {
+    & { text?: (text: string) => Fragment[] }
+    & { [K in keyof JSX.IntrinsicElements]?: (element: Element<K>) => Fragment[] },
+): Fragment[] {
   if (typeof fragment === 'string' && visitors.text) {
-    fragment = pack(Array.from(visitors.text(fragment)))
+    return Array.from(visitors.text(fragment))
   }
   else if (fragment instanceof Element) {
     fragment.children = fragment.children
-      .flatMap(child => unpack(transform(child, visitors)))
+      .flatMap(child => transform(child, visitors))
     const visit = visitors[fragment.type]
     if (visit)
-      fragment = pack(Array.from(visit(fragment as any)))
+      return Array.from(visit(fragment as any))
   }
-  return fragment
+  return [fragment]
 }
 
 const lazy = (inner: any) => () => inner

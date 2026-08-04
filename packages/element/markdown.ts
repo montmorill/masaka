@@ -9,7 +9,7 @@ const PUA_START = 0xE000
 const PUA_SIZE = 6400
 const PUA_PATTERN = /[\uE000-\uF8FF]/u
 
-export function markdown(strings: TemplateStringsArray, ...values: Fragment[]): Fragment {
+export function markdown(strings: TemplateStringsArray, ...values: Fragment[]): Element {
   if (values.length > PUA_SIZE)
     throw new Error(`values length must be less than ${PUA_SIZE}`)
   const markdownText = strings.reduce((res, str, index) => {
@@ -22,12 +22,12 @@ export function markdown(strings: TemplateStringsArray, ...values: Fragment[]): 
   }, '')
   const ast = new Parser().parse(markdownText)
   const fragment = transformNode(ast)
-  return transform(fragment, {
-    text: text => replace(text, PUA_PATTERN, (match) => {
+  return h.template(...transform(fragment, {
+    text: text => Array.from(replace(text, PUA_PATTERN, (match) => {
       const codepoint = match.codePointAt(0)
       return values[codepoint! - PUA_START]!
-    }),
-  })
+    })),
+  }))
 }
 
 export interface MarkdownElement {
