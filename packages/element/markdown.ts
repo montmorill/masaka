@@ -40,7 +40,7 @@ export interface MarkdownElement {
   paragraph: object
   blockquote: object
   item: object
-  list: { type: 'ordered' | 'bullet' }
+  list: { ordered?: boolean }
   heading: { level: number }
   codeblock: { info?: string }
   divider: object
@@ -50,7 +50,7 @@ declare module '@yarkjs/element' {
   interface ElementProps extends MarkdownElement {}
 }
 
-function filterNulls<T extends Record<string, any>>(object: T): {
+function stripNulls<T extends Record<string, any>>(object: T): {
   [K in keyof T as null extends T[K] ? K : never]?: Exclude<T[K], null>
 } extends infer U ? Omit<T, keyof U> & U : never {
   for (const key in object) {
@@ -67,16 +67,16 @@ const TRANSFORMERS: Record<NodeType, (node: Node) => Fragment> = {
   emph: node => h.italic(...transformChildren(node)),
   strong: node => h.bold(...transformChildren(node)),
   html_inline: node => (node.literal!),
-  link: node => h.link(filterNulls({ href: node.destination!, title: node.title }), ...transformChildren(node)),
-  image: node => h.image(filterNulls({ src: node.destination!, title: node.title }), ...transformChildren(node)),
+  link: node => h.link(stripNulls({ href: node.destination!, title: node.title }), ...transformChildren(node)),
+  image: node => h.image(stripNulls({ src: node.destination!, title: node.title }), ...transformChildren(node)),
   code: node => h.code(node.literal!),
   document: node => h.template(...transformChildren(node)),
   paragraph: node => h.paragraph(...transformChildren(node)),
   block_quote: node => h.blockquote(...transformChildren(node)),
   item: node => h.item(...transformChildren(node)),
-  list: node => h.list({ type: node.listType }, ...transformChildren(node)),
+  list: node => h.list({ ordered: node.listType === 'ordered' }, ...transformChildren(node)),
   heading: node => h.heading({ level: node.level }, ...transformChildren(node)),
-  code_block: node => h.codeblock(filterNulls({ info: node.info }), node.literal!),
+  code_block: node => h.codeblock(stripNulls({ info: node.info }), node.literal!),
   html_block: node => node.literal!,
   thematic_break: () => h.divider(),
   custom_inline: () => { throw new Error(`Function custom_inline is not implemented.`) },
@@ -103,8 +103,8 @@ declare module '@yarkjs/element' {
     img(attrs: ElementProps['image']): Element<'image'>
     p(attrs: ElementProps['paragraph']): Element<'paragraph'>
     li(attrs: ElementProps['item']): Element<'item'>
-    ul(attrs: Except<ElementProps['list'], 'type'>): Element<'list'>
-    ol(attrs: Except<ElementProps['list'], 'type'>): Element<'list'>
+    ul(attrs: Except<ElementProps['list'], 'ordered'>): Element<'list'>
+    ol(attrs: Except<ElementProps['list'], 'ordered'>): Element<'list'>
     h1(attrs: Except<ElementProps['heading'], 'level'>): Element<'heading'>
     h2(attrs: Except<ElementProps['heading'], 'level'>): Element<'heading'>
     h3(attrs: Except<ElementProps['heading'], 'level'>): Element<'heading'>
@@ -122,8 +122,8 @@ h.components.a = h.a = (...args) => h.link(...args)
 h.components.img = h.img = (...args) => h.image(...args)
 h.components.p = h.p = (...args) => h.paragraph(...args)
 h.components.li = h.li = (...args) => h.item(...args)
-h.components.ul = h.ul = (...args) => h.list({ type: 'bullet' }).update(...args)
-h.components.ol = h.ol = (...args) => h.list({ type: 'ordered' }).update(...args)
+h.components.ul = h.ul = (...args) => h.list({ ordered: false }).update(...args)
+h.components.ol = h.ol = (...args) => h.list({ ordered: true }).update(...args)
 h.components.h1 = h.h1 = (...args) => h.heading({ level: 1 }).update(...args)
 h.components.h2 = h.h2 = (...args) => h.heading({ level: 2 }).update(...args)
 h.components.h3 = h.h3 = (...args) => h.heading({ level: 3 }).update(...args)

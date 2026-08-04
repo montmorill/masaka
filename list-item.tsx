@@ -19,7 +19,7 @@ class ListElement extends Element<'list'> {
 h.list = (...args) => new ListElement('list', ...args)
 
 console.log(
-  <list type="ordered">
+  <list>
     <ol>item 1</ol>
     <ul>item 2</ul>
   </list>,
