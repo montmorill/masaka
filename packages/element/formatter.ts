@@ -45,8 +45,8 @@ export class Formatter {
   indented(value: string): void {
     this.needLine = false
     const lines = value.split('\n')
-    this.print(lines[0])
-    for (const line of lines.slice(1)) {
+    this.print(lines.shift())
+    for (const line of lines) {
       this.newLine()
       this.print(line)
     }
