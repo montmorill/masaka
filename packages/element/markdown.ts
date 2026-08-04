@@ -39,7 +39,7 @@ export interface MarkdownElement {
   paragraph: object
   blockquote: object
   item: object
-  list: { ordered?: boolean }
+  list: { type: 'ordered' | 'bullet' }
   heading: { level: number }
   codeblock: { info?: string }
   divider: object
@@ -73,7 +73,7 @@ const TRANSFORMERS: Record<NodeType, (node: Node) => Fragment> = {
   paragraph: node => h.paragraph(...transformChildren(node)),
   block_quote: node => h.blockquote(...transformChildren(node)),
   item: node => h.item(...transformChildren(node)),
-  list: node => h.list({ ordered: node.listType === 'ordered' }, ...transformChildren(node)),
+  list: node => h.list({ type: node.listType }, ...transformChildren(node)),
   heading: node => h.heading({ level: node.level }, ...transformChildren(node)),
   code_block: node => h.codeblock(filterNulls({ info: node.info }), node.literal!),
   html_block: node => node.literal!,
@@ -95,18 +95,38 @@ function transformChildren(node: Node): Fragment[] {
 
 declare module '@ayrk/element' {
   interface Elements {
+    br(attrs: ElementProps['newline']): Element<'newline'>
+    i(attrs: ElementProps['italic']): Element<'italic'>
+    b(attrs: ElementProps['bold']): Element<'bold'>
+    a(attrs: ElementProps['link']): Element<'link'>
+    img(attrs: ElementProps['image']): Element<'image'>
+    p(attrs: ElementProps['paragraph']): Element<'paragraph'>
+    li(attrs: ElementProps['item']): Element<'item'>
+    ul(attrs: Omit<ElementProps['list'], 'ordered'>): Element<'list'>
+    ol(attrs: Omit<ElementProps['list'], 'ordered'>): Element<'list'>
     h1(attrs: Omit<ElementProps['heading'], 'level'>): Element<'heading'>
     h2(attrs: Omit<ElementProps['heading'], 'level'>): Element<'heading'>
     h3(attrs: Omit<ElementProps['heading'], 'level'>): Element<'heading'>
     h4(attrs: Omit<ElementProps['heading'], 'level'>): Element<'heading'>
     h5(attrs: Omit<ElementProps['heading'], 'level'>): Element<'heading'>
     h6(attrs: Omit<ElementProps['heading'], 'level'>): Element<'heading'>
+    hr(attrs: ElementProps['divider']): Element<'divider'>
   }
 }
 
+h.components.br = h.br = (...args) => h.newline(...args)
+h.components.i = h.i = (...args) => h.italic(...args)
+h.components.b = h.b = (...args) => h.bold(...args)
+h.components.a = h.a = (...args) => h.link(...args)
+h.components.img = h.img = (...args) => h.image(...args)
+h.components.p = h.p = (...args) => h.paragraph(...args)
+h.components.li = h.li = (...args) => h.item(...args)
+h.components.ul = h.ul = (...args) => h.list({ type: 'bullet' }).update(...args)
+h.components.ol = h.ol = (...args) => h.list({ type: 'ordered' }).update(...args)
 h.components.h1 = h.h1 = (...args) => h.heading({ level: 1 }).update(...args)
 h.components.h2 = h.h2 = (...args) => h.heading({ level: 2 }).update(...args)
 h.components.h3 = h.h3 = (...args) => h.heading({ level: 3 }).update(...args)
 h.components.h4 = h.h4 = (...args) => h.heading({ level: 4 }).update(...args)
 h.components.h5 = h.h5 = (...args) => h.heading({ level: 5 }).update(...args)
 h.components.h6 = h.h6 = (...args) => h.heading({ level: 6 }).update(...args)
+h.components.hr = h.hr = (...args) => h.divider(...args)
