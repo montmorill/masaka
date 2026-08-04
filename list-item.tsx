@@ -24,7 +24,7 @@ class ListElement extends Element<'list'> {
   }
 }
 
-h.list = (...args) => new ListElement('list', ...args)
+h.components.list = h.list = (...args) => new ListElement('list', ...args)
 
 console.log(
   <list>

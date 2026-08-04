@@ -31,18 +31,18 @@ export function markdown(strings: TemplateStringsArray, ...values: Fragment[]): 
 }
 
 export interface MarkdownElement {
-  newline: { children: [] }
-  divider: { children: [] }
-  italic: object
-  bold: object
+  newline: { children: never[] }
+  divider: { children: never[] }
+  italic: { children: string }
+  bold: { children: string }
   link: { href: string, title?: string }
   image: { src: string, title?: string }
-  code: object
+  code: { children: string }
   paragraph: object
   blockquote: object
   item: object
   list: { ordered?: boolean, children: Element<'item'>[] }
-  heading: { level: number }
+  heading: { level: number, children: string }
   codeblock: { info?: string }
 }
 

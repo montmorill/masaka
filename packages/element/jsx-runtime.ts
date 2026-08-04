@@ -10,9 +10,9 @@ export interface Elements {
   mention(attrs: { everyone: true }): Element<'mention'>
   mention(attrs: { user: string }): Element<'mention'>
   mention(attrs: { channel: string }): Element<'mention'>
-  button(attrs: { text: string }): Element<'button'>
-  button(attrs: { href: string }): Element<'button'>
-  button(attrs: { action: string }): Element<'button'>
+  button(attrs: { text: string }, ...children: string[]): Element<'button'>
+  button(attrs: { href: string }, ...children: string[]): Element<'button'>
+  button(attrs: { action: string }, ...children: string[]): Element<'button'>
 }
 
 export interface ElementProps {
@@ -54,18 +54,22 @@ export type PartialElementInit<T extends keyof JSXElements = keyof JSXElements> 
 type _MergedElements = Merge<ElementProps, {
   [T in keyof Elements]: Pretty<Xor<
     Elements[T] extends (...args: any[]) => any
-      ? Parameters<Overloads<Elements[T]>> extends [infer A]
-        ? A extends Fragment ? object : A : object : never
+      ? Parameters<Overloads<Elements[T]>> extends [infer F, ...infer R]
+        ? F extends Fragment ? { children: [F, ...R] }
+          : [] extends R ? F : { children: R } & F
+        : Elements[T]
+      : Elements[T]
   >>
 }>
 
 type _OverwritedElements = {
-  [K in keyof _MergedElements]:
-  K extends keyof OverwriteElementChildren
-    ? Pretty<K extends OptionalKeys<OverwriteElementChildren>
-      ? Omit<_MergedElements[K], 'children'> & { children?: OverwriteElementChildren[K] }
-      : Omit<_MergedElements[K], 'children'> & { children: OverwriteElementChildren[K] }>
-    : _MergedElements[K]
+  [T in keyof _MergedElements]:
+  T extends keyof OverwriteElementChildren
+    ? Pretty<T extends OptionalKeys<OverwriteElementChildren>
+      ? Omit<_MergedElements[T], 'children'> & { children?: OverwriteElementChildren[T] }
+      : Omit<_MergedElements[T], 'children'> & { children: OverwriteElementChildren[T] }>
+    : 'children' extends keyof _MergedElements[T] ? _MergedElements[T]
+      : Pretty<_MergedElements[T] & { children?: Fragment | Fragment[] }>
 }
 
 type JSXElements = _OverwritedElements
