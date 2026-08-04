@@ -9,9 +9,9 @@ export interface Elements {
   mention(attrs: { everyone: true }): Element<'mention'>
   mention(attrs: { user: string }): Element<'mention'>
   mention(attrs: { channel: string }): Element<'mention'>
-  button(attrs: { text: string }, ...children: string[]): Element<'button'>
-  button(attrs: { href: string }, ...children: string[]): Element<'button'>
-  button(attrs: { action: string }, ...children: string[]): Element<'button'>
+  button(attrs: { text: string }): Element<'button'>
+  button(attrs: { href: string }): Element<'button'>
+  button(attrs: { action: string }): Element<'button'>
 }
 
 export interface ElementProps {

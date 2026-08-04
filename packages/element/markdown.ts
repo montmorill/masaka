@@ -33,16 +33,16 @@ export function markdown(strings: TemplateStringsArray, ...values: Fragment[]): 
 export interface MarkdownElement {
   newline: { children: never[] }
   divider: { children: never[] }
-  italic: { children: Fragment }
-  bold: { children: Fragment }
+  italic: object
+  bold: object
   link: { href: string, title?: string }
   image: { src: string, title?: string }
-  code: { children: Fragment }
+  code: object
   paragraph: object
   blockquote: object
   item: object
-  list: { ordered?: boolean, children: Element<'item'>[] }
-  heading: { level: number, children: Fragment }
+  list: { ordered?: boolean }
+  heading: { level: number }
   codeblock: { info?: string }
 }
 
