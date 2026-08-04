@@ -116,7 +116,7 @@ export class Element<T extends keyof JSXElements = keyof JSXElements> {
     }
   }
 
-  toString(opts?: FormatOptions): string {
+  toString(opts: FormatOptions = { colors: false, inline: true }): string {
     const formatter = new BufferFormatter(opts)
     formatter.element(this)
     return formatter.buffer
