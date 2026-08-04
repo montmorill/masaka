@@ -3,6 +3,10 @@ import h, { Element } from './jsx-runtime'
 
 export { markdown } from './markdown'
 
+export function toElement(fragment: Fragment): Element {
+  return fragment instanceof Element ? fragment : h.template(fragment)
+}
+
 export function pack(children: Fragment[]): Fragment {
   return children.length === 1 ? children[0]! : h.template(...children.flatMap(unpack))
 }
