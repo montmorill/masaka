@@ -2,7 +2,7 @@ import type { InspectColor, InspectOptions } from 'node:util'
 import util, { inspect } from 'node:util'
 import { Element, Fragment } from './jsx-runtime'
 
-export interface FormatterOptions {
+export interface FormatOptions extends InspectOptions {
   indent?: string
   inline?: boolean
 }
@@ -12,7 +12,7 @@ export class Formatter {
 
   constructor(
     readonly print: (data: any) => void,
-    readonly opts: InspectOptions & FormatterOptions = {},
+    readonly opts: FormatOptions = {},
   ) {
     for (const key of Object.keys(util.inspect.defaultOptions)) {
       if (!(key in this.opts)) // @ts-ignore
@@ -115,7 +115,7 @@ export class Formatter {
 
 export class BufferFormatter extends Formatter {
   buffer = ''
-  constructor(opts: InspectOptions & FormatterOptions = {}) {
+  constructor(opts: FormatOptions = {}) {
     super(text => this.buffer += text, opts)
   }
 }

@@ -1,5 +1,4 @@
-import type { InspectOptions } from 'node:util'
-import type { FormatterOptions } from './formatter'
+import type { FormatOptions } from './formatter'
 import type { Overloads, Pretty, Xor } from './types'
 import util from 'node:util'
 import { isPlainObject } from 'cosmokit'
@@ -82,13 +81,13 @@ export class Element<T extends keyof JSXElements = keyof JSXElements> {
     return this
   }
 
-  toString(opts?: InspectOptions & FormatterOptions): string {
+  toString(opts?: FormatOptions): string {
     const formatter = new BufferFormatter(opts)
     formatter.element(this)
     return formatter.buffer
   }
 
-  [util.inspect.custom](_: any, opts: InspectOptions): string {
+  [util.inspect.custom](_: any, opts: FormatOptions): string {
     return this.toString(opts)
   }
 }
