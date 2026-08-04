@@ -110,10 +110,9 @@ h.components = {} as {
 
 export default new Proxy(h, {
   get(target, prop, receiver) {
-    if (Object.hasOwn(target, prop))
-      return Reflect.get(target, prop, receiver)
-    // @ts-ignore
-    return (...args) => target(prop, ...args)
+    if (!Object.hasOwn(target, prop)) // @ts-ignore
+      return (...args) => target(prop, ...args)
+    return Reflect.get(target, prop, receiver)
   },
 }) as typeof h & {
   [T in keyof JSXElements]: (...args: ElementInit<T>) => Element<ElementType[T]>
