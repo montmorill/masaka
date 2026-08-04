@@ -1,26 +1,10 @@
 import type { FormatOptions } from './formatter'
-import type { Overloads, Pretty, Xor } from './types'
+import type { Merge, Overloads, Pretty, Xor } from './types'
 import util from 'node:util'
 import { isPlainObject } from 'cosmokit'
 import { BufferFormatter } from './formatter'
 
 export const Fragment = 'template'
-
-export type Fragment = Element | string
-export type MaybeFragment = Fragment | false | null | undefined
-
-export type ElementChildren<T extends keyof JSXElements> =
-  ElementAttrs<T> extends { children: infer C extends any[] } ? C : MaybeFragment[]
-
-export type ElementAttrs<T extends keyof JSXElements> = Omit<JSXElements[T], 'children'>
-
-export type ElementInit<T extends keyof JSXElements = keyof JSXElements> =
-  | [attrs: ElementAttrs<T>, ...children: ElementChildren<T>]
-  | (Partial<ElementAttrs<T>> extends ElementAttrs<T> ? ElementChildren<T> : never)
-
-export type PartialElementInit<T extends keyof JSXElements = keyof JSXElements> =
-  | [attrs: Partial<ElementAttrs<T>>, ...children: ElementChildren<T>]
-  | ElementChildren<T>
 
 export interface Elements {
   mention(attrs: { everyone: true }): Element<'mention'>
@@ -31,11 +15,6 @@ export interface Elements {
   button(attrs: { action: string }): Element<'button'>
 }
 
-type ExtractOverloadProps<K extends keyof Elements> =
-  Pretty<Xor<Elements[K] extends (...args: any[]) => any
-    ? Parameters<Overloads<Elements[K]>> extends [infer A]
-      ? A extends Fragment ? object : A : object : never>>
-
 export interface ElementProps {
   [Fragment]: object
   link: { href: string, title?: string }
@@ -45,17 +24,45 @@ export interface ElementProps {
   file: { src: string, title?: string }
 }
 
-export type JSXElements = {
-  [K in keyof Elements]:
-  K extends keyof ElementProps
-    ? ExtractOverloadProps<K> & ElementProps[K]
-    : ExtractOverloadProps<K>
-} & Omit<ElementProps, keyof Elements>
+export type Fragment = Element | string
+export type MaybeFragment = Fragment | false | null | undefined
 
-export type ElementType = {
-  [K in keyof Elements]:
-  ReturnType<Elements[K]> extends Element<infer T> ? T : never
-} & { [K in keyof Omit<JSXElements, keyof Elements>]: K }
+export type ElementType<T extends keyof JSXElements> =
+  T extends keyof Elements
+    ? ReturnType<Elements[T]> extends Element<infer T> ? T : never
+    : T
+
+export type ElementAttrs<T extends keyof JSXElements> = Omit<JSXElements[T], 'children'>
+
+export type ElementChildren<T extends keyof JSXElements> =
+  ElementAttrs<T> extends { children: infer C extends any[] } ? C : MaybeFragment[]
+
+export type ElementInit<T extends keyof JSXElements = keyof JSXElements> =
+  | [attrs: ElementAttrs<T>, ...children: ElementChildren<T>]
+  | (Partial<ElementAttrs<T>> extends ElementAttrs<T> ? ElementChildren<T> : never)
+
+export type PartialElementInit<T extends keyof JSXElements = keyof JSXElements> =
+  | [attrs: Partial<ElementAttrs<T>>, ...children: ElementChildren<T>]
+  | ElementChildren<T>
+
+export type FragmentJSON = ElementJSON | string
+export interface ElementJSON<T extends keyof JSXElements = keyof JSXElements> {
+  type: ElementType<T>
+  attrs: ElementAttrs<T>
+  children: FragmentJSON[]
+}
+
+export type JSXElements = Merge<ElementProps, {
+  [T in keyof Elements]: Pretty<Xor<
+    Elements[T] extends (...args: any[]) => any
+      ? Parameters<Overloads<Elements[T]>> extends [infer A]
+        ? A extends Fragment ? object : A : object : never
+  >>
+}>
+
+type Compoents = {
+  [T in keyof JSXElements]: (...args: ElementInit<T>) => Element<ElementType<T>>
+}
 
 declare global {
   namespace JSX {
@@ -68,11 +75,11 @@ declare global {
 }
 
 export class Element<T extends keyof JSXElements = keyof JSXElements> {
-  type: ElementType[T]
+  type: ElementType<T>
   attrs: ElementAttrs<T> = {} as any
   children: Fragment[] = []
 
-  constructor(type: ElementType[T], ...args: ElementInit<T>) {
+  constructor(type: ElementType<T>, ...args: ElementInit<T>) {
     this.type = type
     this.update(...args)
   }
@@ -82,6 +89,14 @@ export class Element<T extends keyof JSXElements = keyof JSXElements> {
       Object.assign(this.attrs, args.shift())
     this.children.push(...args.filter(Boolean))
     return this
+  }
+
+  toJSON(): ElementJSON<T> {
+    return {
+      type: this.type,
+      attrs: this.attrs,
+      children: this.children.map(child => child instanceof Element ? child.toJSON() : child),
+    }
   }
 
   toString(opts?: FormatOptions): string {
@@ -95,7 +110,7 @@ export class Element<T extends keyof JSXElements = keyof JSXElements> {
   }
 }
 
-function h<T extends keyof JSXElements>(type: ElementType[T], ...args: ElementInit<T>): Element<T> {
+function h<T extends keyof JSXElements>(type: ElementType<T>, ...args: ElementInit<T>): Element<T> {
   if (h.components[type]) // @ts-ignore
     return h.components[type](...args)
   return new Element(type, ...args)
@@ -103,9 +118,7 @@ function h<T extends keyof JSXElements>(type: ElementType[T], ...args: ElementIn
 
 h.Element = Element
 h.Fragment = Fragment
-h.components = {} as {
-  [K in keyof JSXElements]?: (...args: ElementInit<K>) => Element<ElementType[K]>
-}
+h.components = {} as Partial<Compoents>
 
 export default new Proxy(h, {
   get(target, prop, receiver) {
@@ -113,6 +126,4 @@ export default new Proxy(h, {
       return (...args) => target(prop, ...args)
     return Reflect.get(target, prop, receiver)
   },
-}) as typeof h & {
-  [T in keyof JSXElements]: (...args: ElementInit<T>) => Element<ElementType[T]>
-}
+}) as typeof h & Compoents
