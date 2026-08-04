@@ -1,7 +1,15 @@
 /* eslint-disable no-console */
 
-import type { PartialElementInit } from '@yarkjs/element'
+import type { Fragment, PartialElementInit } from '@yarkjs/element'
 import h, { Element } from '@yarkjs/element'
+
+declare module '@yarkjs/element' {
+  interface OverwriteElementChildren {
+    list: Fragment | Fragment[]
+    ol: Fragment | Fragment[]
+    ul: Fragment | Fragment[]
+  }
+}
 
 class ListElement extends Element<'list'> {
   override update(...args: PartialElementInit<'list'>): this {

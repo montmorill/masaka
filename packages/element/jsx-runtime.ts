@@ -1,5 +1,5 @@
 import type { FormatOptions } from './formatter'
-import type { Merge, Overloads, Pretty, Xor } from './types'
+import type { Merge, OptionalKeys, Overloads, Pretty, Xor } from './types'
 import util from 'node:util'
 import { isPlainObject } from 'cosmokit'
 import { BufferFormatter } from './formatter'
@@ -24,6 +24,8 @@ export interface ElementProps {
   file: { src: string, title?: string }
 }
 
+export interface OverwriteElementChildren {}
+
 export type Fragment = Element | string
 export type MaybeFragment = Fragment | false | null | undefined
 
@@ -32,7 +34,8 @@ export type ElementType<T extends keyof JSXElements> =
     ? ReturnType<Elements[T]> extends Element<infer T> ? T : never
     : T
 
-export type ElementAttrs<T extends keyof JSXElements> = Omit<JSXElements[T], 'children'>
+export type ElementAttrs<T extends keyof JSXElements> =
+  Omit<JSXElements[T], 'children'>
 
 export type ElementChildren<T extends keyof JSXElements> =
   JSXElements[T] extends { children: infer C extends any[] } ? C : Fragment[]
@@ -48,7 +51,7 @@ export type PartialElementInit<T extends keyof JSXElements = keyof JSXElements> 
   | [attrs: Partial<ElementAttrs<T>>, ...children: ElementChildrenInit<T>]
   | ElementChildrenInit<T>
 
-export type JSXElements = Merge<ElementProps, {
+type _MergedElements = Merge<ElementProps, {
   [T in keyof Elements]: Pretty<Xor<
     Elements[T] extends (...args: any[]) => any
       ? Parameters<Overloads<Elements[T]>> extends [infer A]
@@ -56,10 +59,21 @@ export type JSXElements = Merge<ElementProps, {
   >>
 }>
 
+type _OverwritedElements = {
+  [K in keyof _MergedElements]:
+  K extends keyof OverwriteElementChildren
+    ? Pretty<K extends OptionalKeys<OverwriteElementChildren>
+      ? Omit<_MergedElements[K], 'children'> & { children?: OverwriteElementChildren[K] }
+      : Omit<_MergedElements[K], 'children'> & { children: OverwriteElementChildren[K] }>
+    : _MergedElements[K]
+}
+
+type JSXElements = _OverwritedElements
+
 declare global {
   namespace JSX {
+    interface ElementChildrenAttribute { children: object }
     interface IntrinsicElements extends JSXElements {}
-
     type Element = InstanceType<{
       [T in keyof JSXElements]: typeof Element<T>
     }[keyof JSXElements]>
