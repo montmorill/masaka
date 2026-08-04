@@ -17,7 +17,6 @@ export interface Elements {
 
 export interface ElementProps {
   [Fragment]: object
-  newline: { children: [] }
   link: { href: string, title?: string }
   audio: { src: string, title?: string }
   image: { src: string, title?: string }

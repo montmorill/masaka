@@ -31,7 +31,8 @@ export function markdown(strings: TemplateStringsArray, ...values: Fragment[]): 
 }
 
 export interface MarkdownElement {
-  newline: object
+  newline: { children: [] }
+  divider: { children: [] }
   italic: object
   bold: object
   link: { href: string, title?: string }
@@ -40,10 +41,9 @@ export interface MarkdownElement {
   paragraph: object
   blockquote: object
   item: object
-  list: { ordered?: boolean }
+  list: { ordered?: boolean, children: Element<'item'>[] }
   heading: { level: number }
   codeblock: { info?: string }
-  divider: object
 }
 
 declare module '@yarkjs/element' {
@@ -64,6 +64,7 @@ const TRANSFORMERS: Record<NodeType, (node: Node) => Fragment> = {
   text: node => (node.literal!),
   softbreak: () => ' ',
   linebreak: () => h.newline(),
+  thematic_break: () => h.divider(),
   emph: node => h.italic(...transformChildren(node)),
   strong: node => h.bold(...transformChildren(node)),
   html_inline: node => (node.literal!),
@@ -74,11 +75,10 @@ const TRANSFORMERS: Record<NodeType, (node: Node) => Fragment> = {
   paragraph: node => h.paragraph(...transformChildren(node)),
   block_quote: node => h.blockquote(...transformChildren(node)),
   item: node => h.item(...transformChildren(node)),
-  list: node => h.list({ ordered: node.listType === 'ordered' }, ...transformChildren(node)),
+  list: node => h.list({ ordered: node.listType === 'ordered' }, ...transformChildren(node) as Element<'item'>[]),
   heading: node => h.heading({ level: node.level }, ...transformChildren(node)),
   code_block: node => h.codeblock(stripNulls({ info: node.info }), node.literal!),
   html_block: node => node.literal!,
-  thematic_break: () => h.divider(),
   custom_inline: () => { throw new Error(`Function custom_inline is not implemented.`) },
   custom_block: () => { throw new Error(`Function custom_block is not implemented.`) },
 }
@@ -97,6 +97,7 @@ function transformChildren(node: Node): Fragment[] {
 declare module '@yarkjs/element' {
   interface Elements {
     br(attrs: ElementProps['newline']): Element<'newline'>
+    hr(attrs: ElementProps['divider']): Element<'divider'>
     i(attrs: ElementProps['italic']): Element<'italic'>
     b(attrs: ElementProps['bold']): Element<'bold'>
     a(attrs: ElementProps['link']): Element<'link'>
@@ -111,11 +112,11 @@ declare module '@yarkjs/element' {
     h4(attrs: Except<ElementProps['heading'], 'level'>): Element<'heading'>
     h5(attrs: Except<ElementProps['heading'], 'level'>): Element<'heading'>
     h6(attrs: Except<ElementProps['heading'], 'level'>): Element<'heading'>
-    hr(attrs: ElementProps['divider']): Element<'divider'>
   }
 }
 
 h.components.br = h.br = (...args) => h.newline(...args)
+h.components.hr = h.hr = (...args) => h.divider(...args)
 h.components.i = h.i = (...args) => h.italic(...args)
 h.components.b = h.b = (...args) => h.bold(...args)
 h.components.a = h.a = (...args) => h.link(...args)
@@ -130,4 +131,3 @@ h.components.h3 = h.h3 = (...args) => h.heading({ level: 3 }).update(...args)
 h.components.h4 = h.h4 = (...args) => h.heading({ level: 4 }).update(...args)
 h.components.h5 = h.h5 = (...args) => h.heading({ level: 5 }).update(...args)
 h.components.h6 = h.h6 = (...args) => h.heading({ level: 6 }).update(...args)
-h.components.hr = h.hr = (...args) => h.divider(...args)
