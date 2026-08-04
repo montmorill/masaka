@@ -17,4 +17,4 @@ console.log(inspect(h.markdown`
 - I'm ${h.code('yark')},
 - created by ${<mention user="montmorill" />},
 - inspired by ${satori} & ${koishi}.
-`.toJSON()))
+` /* try `.toJSON()` or `.toString()` here! */))
