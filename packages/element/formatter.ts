@@ -115,7 +115,7 @@ export class Formatter {
 
 export class BufferFormatter extends Formatter {
   buffer = ''
-  constructor(opts: InspectOptions & Omit<FormatterOptions, 'print'> = {}) {
+  constructor(opts: InspectOptions & FormatterOptions = {}) {
     super(text => this.buffer += text, opts)
   }
 }

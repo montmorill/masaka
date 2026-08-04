@@ -1,5 +1,7 @@
 export type Pretty<T> = { [K in keyof T]: T[K] } & {}
 
+export type Except<T, K extends keyof T> = Omit<T, K>
+
 export type Xor<T, U = T> = T extends any ? T & {
   [K in Exclude<U extends any ? keyof U : never, keyof T>]?: never
 } : never

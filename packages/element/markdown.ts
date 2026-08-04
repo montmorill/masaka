@@ -1,5 +1,6 @@
 import type { Node, NodeType } from 'commonmark'
 import type { Element, Fragment } from './jsx-runtime'
+import type { Except } from './types'
 import { Parser } from 'commonmark'
 import h from './jsx-runtime'
 import { replace, transform } from './utils'
@@ -102,14 +103,14 @@ declare module '@ayrk/element' {
     img(attrs: ElementProps['image']): Element<'image'>
     p(attrs: ElementProps['paragraph']): Element<'paragraph'>
     li(attrs: ElementProps['item']): Element<'item'>
-    ul(attrs: Omit<ElementProps['list'], 'ordered'>): Element<'list'>
-    ol(attrs: Omit<ElementProps['list'], 'ordered'>): Element<'list'>
-    h1(attrs: Omit<ElementProps['heading'], 'level'>): Element<'heading'>
-    h2(attrs: Omit<ElementProps['heading'], 'level'>): Element<'heading'>
-    h3(attrs: Omit<ElementProps['heading'], 'level'>): Element<'heading'>
-    h4(attrs: Omit<ElementProps['heading'], 'level'>): Element<'heading'>
-    h5(attrs: Omit<ElementProps['heading'], 'level'>): Element<'heading'>
-    h6(attrs: Omit<ElementProps['heading'], 'level'>): Element<'heading'>
+    ul(attrs: Except<ElementProps['list'], 'type'>): Element<'list'>
+    ol(attrs: Except<ElementProps['list'], 'type'>): Element<'list'>
+    h1(attrs: Except<ElementProps['heading'], 'level'>): Element<'heading'>
+    h2(attrs: Except<ElementProps['heading'], 'level'>): Element<'heading'>
+    h3(attrs: Except<ElementProps['heading'], 'level'>): Element<'heading'>
+    h4(attrs: Except<ElementProps['heading'], 'level'>): Element<'heading'>
+    h5(attrs: Except<ElementProps['heading'], 'level'>): Element<'heading'>
+    h6(attrs: Except<ElementProps['heading'], 'level'>): Element<'heading'>
     hr(attrs: ElementProps['divider']): Element<'divider'>
   }
 }

@@ -10,18 +10,15 @@ export const Fragment = 'template'
 export type Fragment = Element | string
 export type MaybeFragment = Fragment | false | null | undefined
 
-type ElementAttrs<T extends keyof JSXElements> =
-  Omit<JSXElements[T], 'children'>
-
 type ElementChildren<T extends keyof JSXElements> =
   JSXElements[T] extends { children: infer C extends any[] } ? C : MaybeFragment[]
 
 type ElementInit<T extends keyof JSXElements = keyof JSXElements> =
-  | [attrs: ElementAttrs<T>, ...children: ElementChildren<T>]
-  | (Partial<ElementAttrs<T>> extends ElementAttrs<T> ? ElementChildren<T> : never)
+  | [attrs: JSXElements[T], ...children: ElementChildren<T>]
+  | (Partial<JSXElements[T]> extends JSXElements[T] ? ElementChildren<T> : never)
 
 type PartialElementInit<T extends keyof JSXElements = keyof JSXElements> =
-  | [attrs: Partial<ElementAttrs<T>>, ...children: ElementChildren<T>]
+  | [attrs: Partial<JSXElements[T]>, ...children: ElementChildren<T>]
   | ElementChildren<T>
 
 export interface Elements {
@@ -72,12 +69,12 @@ declare global {
 export class Element<T extends keyof JSXElements = keyof JSXElements> {
   constructor(
     public type: ElementType[T],
-    public attrs: ElementAttrs<T>,
+    public attrs: JSXElements[T],
     public children: Fragment[] = [],
   ) {}
 
   update(...args: PartialElementInit<T>): this {
-    let attrs = {} as ElementAttrs<T>
+    let attrs = {} as JSXElements[T]
     if (args.length > 0 && isPlainObject(args[0]) && !(args[0] instanceof Element))
       attrs = args.shift()
     Object.assign(this.attrs, attrs)
@@ -85,7 +82,7 @@ export class Element<T extends keyof JSXElements = keyof JSXElements> {
     return this
   }
 
-  toString(opts?: InspectOptions & Omit<FormatterOptions, 'print'>): string {
+  toString(opts?: InspectOptions & FormatterOptions): string {
     const formatter = new BufferFormatter(opts)
     formatter.element(this)
     return formatter.buffer
@@ -99,7 +96,7 @@ export class Element<T extends keyof JSXElements = keyof JSXElements> {
 function h<T extends keyof JSXElements>(type: ElementType[T], ...args: ElementInit<T>): Element<T> {
   if (h.components[type]) // @ts-ignore
     return h.components[type](...args)
-  let attrs = {} as ElementAttrs<T>
+  let attrs = {} as JSXElements[T]
   if (args.length > 0 && isPlainObject(args[0]) && !(args[0] instanceof Element))
     attrs = args.shift()
   return new Element(type, attrs, args.filter(Boolean))
