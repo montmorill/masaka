@@ -1,5 +1,5 @@
 {
-  "name": "@ayrk/element",
+  "name": "@yarkjs/element",
   "type": "module",
   "version": "0.0.0",
   "dependencies": {

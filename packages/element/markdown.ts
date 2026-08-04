@@ -46,7 +46,7 @@ export interface MarkdownElement {
   divider: object
 }
 
-declare module '@ayrk/element' {
+declare module '@yarkjs/element' {
   interface ElementProps extends MarkdownElement {}
 }
 
@@ -94,7 +94,7 @@ function transformChildren(node: Node): Fragment[] {
   return children
 }
 
-declare module '@ayrk/element' {
+declare module '@yarkjs/element' {
   interface Elements {
     br(attrs: ElementProps['newline']): Element<'newline'>
     i(attrs: ElementProps['italic']): Element<'italic'>
