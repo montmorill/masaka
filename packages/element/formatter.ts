@@ -1,4 +1,4 @@
-import type { InspectOptions } from 'node:util'
+import type { InspectColor, InspectOptions } from 'node:util'
 import util, { inspect } from 'node:util'
 import { Element, Fragment } from './jsx-runtime'
 
@@ -34,7 +34,7 @@ export class Formatter {
     this.needLine = false
   }
 
-  styled(format: Parameters<typeof util.styleText>[0], data: any): string {
+  styled(format: InspectColor, data: any): string {
     return this.opts.colors ? util.styleText(format, data) : data
   }
 
