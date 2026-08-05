@@ -1,12 +1,12 @@
 import type { InspectColor } from 'node:util'
+import type { ElementJSON } from './jsx-runtime'
 import util from 'node:util'
 import { highlight } from '@babel/code-frame'
 import { Element, Fragment } from './jsx-runtime'
 
 export interface FormatOptions {
   colors?: boolean
-  compact?: boolean
-  inline?: boolean
+  compact?: boolean | 'inline'
 }
 
 export class Formatter {
@@ -30,7 +30,7 @@ export class Formatter {
   }
 
   newLine(): void {
-    if (this.opts.inline)
+    if (this.opts.compact === 'inline')
       return
     this.print(`\n${'  '.repeat(this.depth)}`)
     this.needLine = false
@@ -74,7 +74,7 @@ export class Formatter {
     }
   }
 
-  element(element: Element): void {
+  element(element: ElementJSON): void {
     const tag = this.styled('green', element.type === Fragment ? '' : element.type)
     if (this.needLine)
       this.newLine()
@@ -100,7 +100,7 @@ export class Formatter {
     this.needLine = true
   }
 
-  node(node: any): void {
+  node(node: unknown): void {
     if (node instanceof Element)
       return this.element(node)
     if (typeof node === 'string')

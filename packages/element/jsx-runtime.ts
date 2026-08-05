@@ -83,11 +83,10 @@ declare global {
   }
 }
 
-export type FragmentJSON = ElementJSON | string
 export interface ElementJSON<T extends keyof JSXElements = keyof JSXElements> {
   type: ElementType<T>
   attrs: ElementAttrs<T>
-  children: FragmentJSON[]
+  children: any[]
 }
 
 export class Element<T extends keyof JSXElements = keyof JSXElements> {
@@ -112,11 +111,12 @@ export class Element<T extends keyof JSXElements = keyof JSXElements> {
     return {
       type: this.type,
       attrs: this.attrs,
-      children: this.children.map(child => child instanceof Element ? child.toJSON() : child),
+      children: this.children.map(child => child
+        && typeof child.toJSON === 'function' ? child.toJSON() : child),
     }
   }
 
-  toString(opts: FormatOptions = { colors: false, inline: true }): string {
+  toString(opts: FormatOptions = { colors: false, compact: 'inline' }): string {
     const formatter = new BufferFormatter(opts)
     formatter.element(this)
     return formatter.buffer
