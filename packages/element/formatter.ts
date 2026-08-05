@@ -20,9 +20,10 @@ export class Formatter {
     }
   }
 
-  nested(): Formatter {
+  nested(opts: FormatOptions = {}): Formatter {
     return new Formatter(this.print, {
       ...this.opts,
+      ...opts,
       indent: `${this.opts.indent ?? ''}  `,
     })
   }
@@ -102,7 +103,15 @@ export class Formatter {
       this.element(node)
     }
     else if (typeof node === 'string') {
-      this.indented(node)
+      if (!this.opts.compact && node.includes('\n')) {
+        const nested = this.nested({ compact: false })
+        nested.newLine()
+        nested.indented(node)
+        this.newLine()
+      }
+      else {
+        this.indented(node)
+      }
     }
     else {
       if (this.needLine)
