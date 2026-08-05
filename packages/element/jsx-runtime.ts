@@ -71,7 +71,7 @@ type _OverwritedElements = {
       : Pretty<_MergedElements[T] & { children?: Fragment | Fragment[] }>
 }
 
-type JSXElements = _OverwritedElements
+export type JSXElements = _OverwritedElements
 
 declare global {
   namespace JSX {

@@ -1,4 +1,4 @@
-import type { Fragment } from './jsx-runtime'
+import type { Fragment, JSXElements } from './jsx-runtime'
 import h, { Element } from './jsx-runtime'
 
 export { markdown } from './markdown'
@@ -23,9 +23,8 @@ export function raw(strings: TemplateStringsArray, ...values: Fragment[]): Fragm
 
 export function transform(
   fragment: Fragment,
-  visitors:
-    & { text?: (text: string) => Fragment[] }
-    & { [K in keyof JSX.IntrinsicElements]?: (element: Element<K>) => Fragment[] },
+  visitors: { text?: (text: string) => Fragment[] }
+    & { [T in keyof JSXElements]?: (element: Element<T>) => Fragment[] },
 ): Fragment[] {
   if (typeof fragment === 'string' && visitors.text) {
     return Array.from(visitors.text(fragment))
