@@ -86,13 +86,13 @@ declare global {
 export interface ElementJSON<T extends keyof JSXElements = keyof JSXElements> {
   type: ElementType<T>
   attrs: ElementAttrs<T>
-  children: any[]
+  children: Fragment[]
 }
 
 export class Element<T extends keyof JSXElements = keyof JSXElements> {
   type: ElementType<T>
   attrs: ElementAttrs<T> = {} as any
-  children: ElementChildren<T> = [] as any
+  children: Fragment[] = []
 
   constructor(type: ElementType<T>, ...args: ElementInit<T>) {
     this.type = type
@@ -111,7 +111,7 @@ export class Element<T extends keyof JSXElements = keyof JSXElements> {
     return {
       type: this.type,
       attrs: this.attrs,
-      children: this.children.map(child => child
+      children: this.children.map(child => child // @ts-ignore
         && typeof child.toJSON === 'function' ? child.toJSON() : child),
     }
   }
