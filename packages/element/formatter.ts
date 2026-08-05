@@ -1,8 +1,11 @@
-import type { InspectColor, InspectOptions } from 'node:util'
-import util, { inspect } from 'node:util'
+import type { InspectColor } from 'node:util'
+import util from 'node:util'
+import { highlight } from '@babel/code-frame'
 import { Element, Fragment } from './jsx-runtime'
 
-export interface FormatOptions extends InspectOptions {
+export interface FormatOptions {
+  colors?: boolean
+  compact?: boolean
   inline?: boolean
 }
 
@@ -52,7 +55,10 @@ export class Formatter {
   }
 
   object(object: any): void {
-    this.indented(`{${inspect(object, this.opts)}}`)
+    if (typeof object === 'function')
+      this.indented(`{${highlight(object.toString())}}`)
+    else
+      this.indented(`{${highlight(JSON.stringify(object))}}`)
   }
 
   attrs(attrs: Record<string, any>): void {
@@ -95,26 +101,12 @@ export class Formatter {
   }
 
   node(node: any): void {
-    if (node instanceof Element) {
+    if (node instanceof Element)
       this.element(node)
-    }
-    else if (typeof node === 'string') {
-      if (this.opts.compact || !node.includes('\n')) {
-        this.indented(node)
-      }
-      else {
-        const nested = this.nest()
-        nested.newLine()
-        nested.indented(node)
-        this.newLine()
-      }
-    }
-    else {
-      if (node && typeof node.toString === 'function')
-        this.indented(`{${node.toString()}}`)
-      else
-        this.object(node)
-    }
+    else if (typeof node === 'string')
+      this.indented(node)
+    else
+      this.object(node)
   }
 }
 
