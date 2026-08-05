@@ -55,10 +55,10 @@ export class Formatter {
   }
 
   object(object: any): void {
-    if (typeof object === 'function')
-      this.indented(`{${highlight(object.toString())}}`)
-    else
-      this.indented(`{${highlight(JSON.stringify(object))}}`)
+    const string = typeof object === 'function'
+      ? object.toString()
+      : JSON.stringify(object)
+    this.indented(`{${this.opts.colors ? highlight(string) : string}}`)
   }
 
   attrs(attrs: Record<string, any>): void {
@@ -102,11 +102,15 @@ export class Formatter {
 
   node(node: any): void {
     if (node instanceof Element)
-      this.element(node)
-    else if (typeof node === 'string')
-      this.indented(node)
-    else
-      this.object(node)
+      return this.element(node)
+    if (typeof node === 'string')
+      return this.indented(node)
+    if (this.opts.compact)
+      return this.object(node)
+    if (this.needLine)
+      this.newLine()
+    this.object(node)
+    this.needLine = true
   }
 }
 
