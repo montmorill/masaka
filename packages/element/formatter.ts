@@ -32,7 +32,7 @@ export class Formatter {
   }
 
   string(value: string): void {
-    this.print(`"${this.styled('green', value.replaceAll('"', '\\"'))}"`)
+    this.print(this.styled('green', JSON.stringify(value)))
   }
 
   indented(value: string): void {
