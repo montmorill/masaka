@@ -3,15 +3,15 @@ import util, { inspect } from 'node:util'
 import { Element, Fragment } from './jsx-runtime'
 
 export interface FormatOptions extends InspectOptions {
-  indent?: string
   inline?: boolean
 }
 
 export class Formatter {
   private needLine = false
+  private indent = 0
 
   constructor(
-    readonly print: (data: any) => void,
+    readonly print: (str: string) => void,
     readonly opts: FormatOptions = {},
   ) {
     for (const key of Object.keys(util.inspect.defaultOptions)) {
@@ -20,18 +20,10 @@ export class Formatter {
     }
   }
 
-  nested(opts: FormatOptions = {}): Formatter {
-    return new Formatter(this.print, {
-      ...this.opts,
-      ...opts,
-      indent: `${this.opts.indent ?? ''}  `,
-    })
-  }
-
   newLine(): void {
     if (this.opts.inline)
       return
-    this.print(`\n${this.opts.indent ?? ''}`)
+    this.print(`\n${'  '.repeat(this.indent)}`)
     this.needLine = false
   }
 
@@ -46,7 +38,7 @@ export class Formatter {
   indented(value: string): void {
     this.needLine = false
     const lines = value.split('\n')
-    this.print(lines.shift())
+    this.print(lines.shift()!)
     for (const line of lines) {
       this.newLine()
       this.print(line)
@@ -81,16 +73,15 @@ export class Formatter {
     }
     else {
       this.print('>')
-      if (element.children.length === 1
-        && (this.opts.compact || !(element.children[0] instanceof Element))) {
+      if (this.opts.compact && element.children.length === 1) {
         this.node(element.children[0]!)
       }
       else {
-        const nested = this.nested()
-        nested.newLine()
-        for (const child of element.children) {
-          nested.node(child)
-        }
+        this.indent++
+        this.newLine()
+        for (const child of element.children)
+          this.node(child)
+        this.indent--
         this.newLine()
       }
       this.print(`</${tag}>`)
@@ -98,26 +89,27 @@ export class Formatter {
     this.needLine = true
   }
 
-  node(node: Fragment): void {
+  node(node: any): void {
     if (node instanceof Element) {
       this.element(node)
     }
     else if (typeof node === 'string') {
-      if (!this.opts.compact && node.includes('\n')) {
-        const nested = this.nested({ compact: false })
-        nested.newLine()
-        nested.indented(node)
-        this.newLine()
+      if (this.opts.compact || !node.includes('\n')) {
+        this.indented(node)
       }
       else {
+        this.indent++
+        this.newLine()
         this.indented(node)
+        this.indent--
+        this.newLine()
       }
     }
     else {
-      if (this.needLine)
-        this.newLine()
-      this.object(node)
-      this.newLine()
+      if (node && typeof node.toString === 'function')
+        this.indented(`{${node.toString()}}`)
+      else
+        this.object(node)
     }
   }
 }
