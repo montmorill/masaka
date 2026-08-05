@@ -8,7 +8,7 @@ export interface FormatOptions extends InspectOptions {
 
 export class Formatter {
   private needLine = false
-  private indent = 0
+  private depth = 0
 
   constructor(
     readonly print: (str: string) => void,
@@ -20,10 +20,16 @@ export class Formatter {
     }
   }
 
+  nest(): Formatter {
+    const formatter = new Formatter(this.print, this.opts)
+    formatter.depth = this.depth + 1
+    return formatter
+  }
+
   newLine(): void {
     if (this.opts.inline)
       return
-    this.print(`\n${'  '.repeat(this.indent)}`)
+    this.print(`\n${'  '.repeat(this.depth)}`)
     this.needLine = false
   }
 
@@ -77,11 +83,10 @@ export class Formatter {
         this.node(element.children[0]!)
       }
       else {
-        this.indent++
-        this.newLine()
+        const nested = this.nest()
+        nested.newLine()
         for (const child of element.children)
-          this.node(child)
-        this.indent--
+          nested.node(child)
         this.newLine()
       }
       this.print(`</${tag}>`)
@@ -98,10 +103,9 @@ export class Formatter {
         this.indented(node)
       }
       else {
-        this.indent++
-        this.newLine()
-        this.indented(node)
-        this.indent--
+        const nested = this.nest()
+        nested.newLine()
+        nested.indented(node)
         this.newLine()
       }
     }
