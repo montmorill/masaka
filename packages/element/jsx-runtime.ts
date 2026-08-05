@@ -31,8 +31,7 @@ export type ElementType<T extends keyof JSXElements> =
     ? ReturnType<Elements[T]> extends Element<infer T> ? T : never
     : T
 
-export type ElementAttrs<T extends keyof JSXElements> =
-  Omit<JSXElements[T], 'children'>
+export type ElementAttrs<T extends keyof JSXElements> = JSXElements[T]
 
 export type ElementInit<T extends keyof JSXElements = keyof JSXElements> =
   | [attrs: ElementAttrs<T>, ...children: MaybeFragment[]]
