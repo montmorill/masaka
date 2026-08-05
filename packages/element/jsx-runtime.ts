@@ -1,5 +1,5 @@
 import type { FormatOptions } from './formatter'
-import type { Merge, OptionalKeys, Overloads, Pretty, Xor } from './types'
+import type { Merge, Overloads, Pretty, Xor } from './types'
 import util from 'node:util'
 import { BufferFormatter } from './formatter'
 
@@ -23,8 +23,6 @@ export interface ElementProps {
   file: { src: string, title?: string }
 }
 
-export interface OverwriteElementChildren {}
-
 export type Fragment = Element | string
 export type MaybeFragment = Fragment | false | null | undefined
 
@@ -36,46 +34,26 @@ export type ElementType<T extends keyof JSXElements> =
 export type ElementAttrs<T extends keyof JSXElements> =
   Omit<JSXElements[T], 'children'>
 
-export type ElementChildren<T extends keyof JSXElements> =
-  JSXElements[T] extends { children: infer C extends any[] } ? C : Fragment[]
-
-type ElementChildrenInit<T extends keyof JSXElements> =
-  JSXElements[T] extends { children: infer C extends any[] } ? C : MaybeFragment[]
-
 export type ElementInit<T extends keyof JSXElements = keyof JSXElements> =
-  | [attrs: ElementAttrs<T>, ...children: ElementChildrenInit<T>]
-  | (Partial<ElementAttrs<T>> extends ElementAttrs<T> ? ElementChildrenInit<T> : never)
+  | [attrs: ElementAttrs<T>, ...children: MaybeFragment[]]
+  | (Partial<ElementAttrs<T>> extends ElementAttrs<T> ? MaybeFragment[] : never)
 
 export type PartialElementInit<T extends keyof JSXElements = keyof JSXElements> =
-  | [attrs: Partial<ElementAttrs<T>>, ...children: ElementChildrenInit<T>]
-  | ElementChildrenInit<T>
+  | [attrs: Partial<ElementAttrs<T>>, ...children: MaybeFragment[]]
+  | MaybeFragment[]
 
-type _MergedElements = Merge<ElementProps, {
+export type JSXElements = Merge<ElementProps, {
   [T in keyof Elements]: Pretty<Xor<
     Elements[T] extends (...args: any[]) => any
       ? Parameters<Overloads<Elements[T]>> extends [infer F, ...infer R]
-        ? F extends Fragment ? { children: [F, ...R] }
-          : [] extends R ? F : { children: R } & F
+        ? F extends Fragment ? object : [] extends R ? F : F
         : Elements[T]
       : Elements[T]
   >>
 }>
 
-type _OverwritedElements = {
-  [T in keyof _MergedElements]:
-  T extends keyof OverwriteElementChildren
-    ? Pretty<T extends OptionalKeys<OverwriteElementChildren>
-      ? Omit<_MergedElements[T], 'children'> & { children?: OverwriteElementChildren[T] }
-      : Omit<_MergedElements[T], 'children'> & { children: OverwriteElementChildren[T] }>
-    : 'children' extends keyof _MergedElements[T] ? _MergedElements[T]
-      : Pretty<_MergedElements[T] & { children?: Fragment | Fragment[] }>
-}
-
-export type JSXElements = _OverwritedElements
-
 declare global {
   namespace JSX {
-    interface ElementChildrenAttribute { children: object }
     interface IntrinsicElements extends JSXElements {}
     type Element = InstanceType<{
       [T in keyof JSXElements]: typeof Element<T>
@@ -103,7 +81,7 @@ export class Element<T extends keyof JSXElements = keyof JSXElements> {
     const isPlainObject = args[0] && typeof args[0] === 'object' && !Array.isArray(args[0])
     if (isPlainObject && !(args[0] instanceof Element))
       Object.assign(this.attrs, args.shift())
-    this.children.push(...args.filter(Boolean))
+    this.children.push(...args.filter(Boolean) as Fragment[])
     return this
   }
 

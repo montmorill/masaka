@@ -32,8 +32,8 @@ export function markdown(strings: TemplateStringsArray, ...values: Fragment[]): 
 }
 
 export interface MarkdownElement {
-  newline: { children: never[] }
-  divider: { children: never[] }
+  newline: object
+  divider: object
   italic: object
   bold: object
   link: { href: string, title?: string }
