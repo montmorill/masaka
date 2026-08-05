@@ -13,8 +13,9 @@ export function markdown(strings: TemplateStringsArray, ...values: Fragment[]): 
   if (values.length > PUA_SIZE)
     throw new Error(`values length must be less than ${PUA_SIZE}`)
   const markdownText = strings.reduce((res, str, index) => {
-    if (PUA_PATTERN.test(str))
-      throw new Error(`strings must not contain PUA characters: ${str}`)
+    const puaIndex = str.search(PUA_PATTERN)
+    if (puaIndex !== -1)
+      throw new Error(`strings must not contain PUA characters: ${str[puaIndex]}`)
     res += str
     if (index < values.length)
       res += String.fromCodePoint(PUA_START + index)
