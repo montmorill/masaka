@@ -1,7 +1,7 @@
 import type { Except } from '@yarkjs/utils'
 import type { Node, NodeType } from 'commonmark'
 import type { Element, Fragment } from './jsx-runtime'
-import { stripNulls } from '@yarkjs/utils'
+import { stripNullish } from '@yarkjs/utils'
 import { Parser } from 'commonmark'
 import h from './jsx-runtime'
 import { pack, replace, toElement, transform } from './utils'
@@ -60,8 +60,8 @@ const TRANSFORMERS: Record<NodeType, (node: Node) => Fragment> = {
   emph: node => h.italic(...transformChildren(node)),
   strong: node => h.bold(...transformChildren(node)),
   html_inline: node => (node.literal!),
-  link: node => h.link(stripNulls({ href: node.destination!, title: node.title }), ...transformChildren(node)),
-  image: node => h.image(stripNulls({ src: node.destination!, title: node.title }), ...transformChildren(node)),
+  link: node => h.link(stripNullish({ href: node.destination!, title: node.title }), ...transformChildren(node)),
+  image: node => h.image(stripNullish({ src: node.destination!, title: node.title }), ...transformChildren(node)),
   code: node => h.code(node.literal!),
   document: node => h.template(...transformChildren(node)),
   paragraph: node => h.paragraph(...transformChildren(node)),
@@ -69,7 +69,7 @@ const TRANSFORMERS: Record<NodeType, (node: Node) => Fragment> = {
   item: node => h.item(...transformChildren(node)),
   list: node => h.list({ ordered: node.listType === 'ordered' }, ...transformChildren(node) as Element<'item'>[]),
   heading: node => h.heading({ level: node.level }, ...transformChildren(node)),
-  code_block: node => h.codeblock(stripNulls({ info: node.info }), node.literal!),
+  code_block: node => h.codeblock(stripNullish({ info: node.info }), node.literal!),
   html_block: node => node.literal!,
   custom_inline: () => { throw new Error(`Function custom_inline is not implemented.`) },
   custom_block: () => { throw new Error(`Function custom_block is not implemented.`) },
