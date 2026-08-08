@@ -11,3 +11,7 @@ export function stripNulls<T extends Record<string, any>>(object: T): {
   }
   return object as any
 }
+
+export function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms))
+}
