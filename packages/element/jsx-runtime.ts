@@ -77,8 +77,7 @@ export class Element<T extends keyof JSXElements = keyof JSXElements> {
   }
 
   update(...args: PartialElementInit<T>): this {
-    const isPlainObject = args[0] && typeof args[0] === 'object' && !Array.isArray(args[0])
-    if (isPlainObject && !(args[0] instanceof Element))
+    if (typeof args[0] === 'object' && !(args[0] instanceof Element))
       Object.assign(this.attrs, args.shift())
     this.children.push(...args.filter(Boolean) as Fragment[])
     return this
