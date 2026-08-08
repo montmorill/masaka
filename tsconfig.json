@@ -1,9 +1,8 @@
 {
   "compilerOptions": {
     "target": "ESNext",
-    "jsx": "react",
-    "jsxFactory": "h",
-    "jsxFragmentFactory": "h.template",
+    "jsx": "react-jsx",
+    "jsxImportSource": "@yarkjs/element",
     "lib": ["ESNext"],
     "moduleDetection": "force",
     "module": "ESNext",

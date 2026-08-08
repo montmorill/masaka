@@ -31,7 +31,7 @@ export type ElementType<T extends keyof JSXElements> =
     ? ReturnType<Elements[T]> extends Element<infer T> ? T : never
     : T
 
-export type ElementAttrs<T extends keyof JSXElements> = JSXElements[T]
+export type ElementAttrs<T extends keyof JSXElements> = Omit<JSXElements[T], 'children'>
 
 export type ElementInit<T extends keyof JSXElements = keyof JSXElements> =
   | [attrs: ElementAttrs<T>, ...children: MaybeFragment[]]
@@ -48,7 +48,7 @@ export type JSXElements = Merge<ElementProps, {
         ? F extends Fragment ? object : [] extends R ? F : F
         : Elements[T]
       : Elements[T]
-  >>
+  >> & { children?: Fragment | Fragment[] }
 }>
 
 declare global {
@@ -123,3 +123,14 @@ export default new Proxy(h, {
     return Reflect.get(target, prop, receiver)
   },
 }) as typeof h & { [T in keyof JSXElements]: Component<T> }
+
+export function jsx<T extends keyof JSXElements>(
+  type: ElementType<T>,
+  props: ElementAttrs<T> & { children?: Fragment | Fragment[] },
+): Element<T> {
+  if (Array.isArray(props.children))
+    return h(type, props, ...props.children)
+  if (props.children)
+    return h(type, props, props.children)
+  return h(type, props)
+}
