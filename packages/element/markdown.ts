@@ -1,6 +1,7 @@
+import type { Except } from '@yarkjs/utils'
 import type { Node, NodeType } from 'commonmark'
 import type { Element, Fragment } from './jsx-runtime'
-import type { Except } from './types'
+import { stripNulls } from '@yarkjs/utils'
 import { Parser } from 'commonmark'
 import h from './jsx-runtime'
 import { pack, replace, toElement, transform } from './utils'
@@ -49,16 +50,6 @@ export interface MarkdownElement {
 
 declare module '@yarkjs/element' {
   interface ElementProps extends MarkdownElement {}
-}
-
-function stripNulls<T extends Record<string, any>>(object: T): {
-  [K in keyof T as null extends T[K] ? K : never]?: Exclude<T[K], null>
-} extends infer U ? Omit<T, keyof U> & U : never {
-  for (const key in object) {
-    if (object[key] === null)
-      delete object[key]
-  }
-  return object as any
 }
 
 const TRANSFORMERS: Record<NodeType, (node: Node) => Fragment> = {

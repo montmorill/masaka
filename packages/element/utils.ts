@@ -1,4 +1,5 @@
 import type { Fragment, JSXElements } from './jsx-runtime'
+import { lazy } from '@yarkjs/utils'
 import h, { Element } from './jsx-runtime'
 
 export { markdown } from './markdown'
@@ -38,8 +39,6 @@ export function transform(
   }
   return [fragment]
 }
-
-const lazy = (inner: any) => () => inner
 
 export function* replace(
   string: string,

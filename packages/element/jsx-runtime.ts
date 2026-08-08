@@ -1,5 +1,5 @@
+import type { Merge, Overloads, Pretty, Xor } from '@yarkjs/utils'
 import type { FormatOptions } from './formatter'
-import type { Merge, Overloads, Pretty, Xor } from './types'
 import util from 'node:util'
 import { BufferFormatter } from './formatter'
 
