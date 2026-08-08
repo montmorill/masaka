@@ -1,12 +1,11 @@
-import type { Pretty } from './types'
+import type { Overwrite, Pretty } from './types'
 
 export * from './types'
 
 export const lazy = (inner: any) => () => inner
 
-export function stripNullish<T extends Record<string, any>>(object: T): Pretty<{
-  [K in keyof T as null extends T[K] ? K : never]?: NonNullable<T[K]>
-} extends infer U ? Omit<T, keyof U> & U : never> {
+export function stripNullish<T extends Record<string, any>>(object: T):
+Pretty<Overwrite<T, { [K in keyof T as null extends T[K] ? K : never]?: NonNullable<T[K]> }>> {
   for (const key in Object.keys(object)) {
     if (object[key] == null)
       delete object[key]
