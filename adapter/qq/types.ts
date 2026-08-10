@@ -146,34 +146,6 @@ export interface GroupMember {
   username: string
 }
 
-export interface ArkData {
-  ark_name: string
-  ark_type: string
-  fields: Record<string, string>
-  prompt: string
-}
-
-export interface KnownArkData {
-  tuwen: {
-    ark_name: '图文H5'
-    fields: {
-      title: string
-      desc: string
-      tag: string
-      jump_url: string
-    }
-  }
-  miniapp: {
-    ark_name: '小程序'
-    fields: {
-      title: string
-      preview: string
-      source: string
-      source_logo: string
-    }
-  }
-}
-
 export type MessageAttachment = {
   filename: string
   size: number
@@ -193,6 +165,13 @@ export type MessageAttachment = {
   }
 )
 
+export interface ArkData {
+  ark_name: string
+  ark_type: string
+  fields: Record<string, string>
+  prompt: string
+}
+
 export interface GroupMessage {
   author: GroupMember
   content: string
@@ -203,12 +182,6 @@ export interface GroupMessage {
   message_type: MessageType
   timestamp: string
   attachments?: MessageAttachment[]
-  ark_data?: ArkData | {
-    [T in keyof KnownArkData]: {
-      ark_type: T
-      prompt: string
-    } & KnownArkData[T] & {}
-  }[keyof KnownArkData]
 }
 
 export interface DispatchEvents {
