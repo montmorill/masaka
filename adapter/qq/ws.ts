@@ -8,47 +8,25 @@ export type DispatchEventMap = {
 }
 
 export default class QQBotWS extends EventEmitter<DispatchEventMap> {
-  private serial: number | null = null
+  private seq: number | null = null
 
   readonly version!: 1
   readonly sessionId!: string
   readonly user!: QQ.User
   readonly shard!: QQ.Shard
 
-  static async connect(bot: QQBot): Promise<QQBotWS> {
-    const gateway = await bot.gatewayBot()
-    const ws = new QQBotWS(bot, new WebSocket(gateway.url))
+  private constructor(
+    public bot: QQBot,
+    public intents: QQ.Intents,
+    public inner: WebSocket,
+  ) { super({ captureRejections: true }) }
 
-    ws.inner.onmessage = (event) => {
-      const payload: QQ.Payload = JSON.parse(event.data)
-      if (payload.s)
-        ws.serial = payload.s
-      switch (payload.op) {
-        case QQ.OpCode.Dispatch:
-          ws.emit('dispatch', payload)
-          ws.emit(payload.t.toLowerCase(), payload.d)
-          break
-
-        case QQ.OpCode.Hello:
-          setInterval(
-            () => ws.send(QQ.OpCode.Heartbeat, ws.serial),
-            payload.d.heartbeat_interval,
-          )
-          ws.send(QQ.OpCode.Identify, {
-            token: `QQBot ${bot.accessToken}`,
-            intents: QQ.Intents.ALL,
-            shard: [0, 1],
-          })
-          break
-
-        case QQ.OpCode.HeartbeatAck:
-          break
-
-        default:
-          console.warn('unknown payload', payload)
-          break
-      }
-    }
+  static async create(bot: QQBot, intents: QQ.Intents): Promise<QQBotWS> {
+    const gateway = await bot.gateway()
+    const ws = new QQBotWS(bot, intents, new WebSocket(gateway.url))
+    ws.inner.onmessage = ws.onmessage.bind(ws)
+    ws.inner.onerror = () => ws.reconnect()
+    ws.inner.onclose = () => ws.reconnect()
 
     return Object.assign(ws, await new Promise((resolve) => {
       ws.once('ready', (payload) => {
@@ -58,8 +36,49 @@ export default class QQBotWS extends EventEmitter<DispatchEventMap> {
     }))
   }
 
-  constructor(public bot: QQBot, public inner: WebSocket) {
-    super({ captureRejections: true })
+  async reconnect(): Promise<void> {
+    this.inner.close()
+    const gateway = await this.bot.gateway()
+    this.inner = new WebSocket(gateway.url)
+    this.inner.onmessage = this.onmessage.bind(this)
+    this.inner.onerror = () => this.reconnect()
+    this.inner.onclose = () => this.reconnect()
+
+    this.send(QQ.OpCode.Resume, {
+      token: this.bot.accessToken!,
+      session_id: this.sessionId,
+      seq: this.seq!,
+    })
+    await new Promise(resolve => this.on('resumed', resolve))
+  }
+
+  onmessage(event: MessageEvent): void {
+    const payload: QQ.Payload = JSON.parse(event.data)
+    if (payload.s)
+      this.seq = payload.s
+    switch (payload.op) {
+      /* eslint-disable style/max-statements-per-line */
+      case QQ.OpCode.Dispatch: this.dispatch(payload); break
+      case QQ.OpCode.Reconnect: this.reconnect(); break
+      case QQ.OpCode.Hello: this.hello(payload.d.heartbeat_interval); break
+      case QQ.OpCode.HeartbeatAck: break
+      default: console.warn('unknown payload', payload); break
+      /* eslint-enable style/max-statements-per-line */
+    }
+  }
+
+  dispatch(payload: QQ.Payload<QQ.OpCode.Dispatch>): void {
+    this.emit('dispatch', payload.t, payload.d)
+    this.emit(payload.t.toLowerCase(), payload.d)
+  }
+
+  async hello(interval: number): Promise<void> {
+    setInterval(() => this.send(QQ.OpCode.Heartbeat, this.seq), interval)
+    this.send(QQ.OpCode.Identify, {
+      token: `QQBot ${this.bot.accessToken}`,
+      intents: this.intents,
+      shard: [0, 1],
+    })
   }
 
   async send<Op extends keyof QQ.PayloadData>(
