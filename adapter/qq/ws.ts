@@ -3,13 +3,11 @@ import assert from 'node:assert'
 import { EventEmitter } from 'node:events'
 import * as QQ from './types'
 
-export type DispatchEventMap = {
-  [T in keyof QQ.DispatchEvents as Lowercase<T>]: [data: QQ.DispatchEvents[T]]
-} & {
-  '*': {
+export type DispatchEventMap =
+  { [T in keyof QQ.DispatchEvents as Lowercase<T>]: [data: QQ.DispatchEvents[T]] }
+  & Record<'*', {
     [T in keyof QQ.DispatchEvents]: [event: Lowercase<T>, data: QQ.DispatchEvents[T]]
-  }[keyof QQ.DispatchEvents]
-}
+  }[keyof QQ.DispatchEvents]>
 
 export default class QQBotWS extends EventEmitter<DispatchEventMap> {
   private seq: number | null = null
