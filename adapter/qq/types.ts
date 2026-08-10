@@ -233,13 +233,13 @@ export interface KnownArkDataTypes {
   /** 视频分享 */ video_share: unknown
   /** 一起听歌 */ music_together: {
     ark_name: '一起听歌'
-    button: '加入一起听歌'
-    cover: `http://img.tencentmusic.com/${string}`
-    desc: string
-    inviteType: 'listen' | unknown
-    songId: string
     title: '一起听歌'
+    desc: string
+    songId: string
+    cover: `http://img.tencentmusic.com/${string}`
+    inviteType: 'listen' | unknown
     type: 'music_invite' | unknown
+    button: '加入一起听歌' | string
     /** @type `[开启了一起听歌] ${this['desc']}` */
     prompt: `[开启了一起听歌] ${string}`
   }
