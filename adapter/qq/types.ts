@@ -172,14 +172,23 @@ export interface KnownArkDataTypes {
     | { prompt: '[分享]空间说说' }
     | { prompt: `创建了群相册《${string}》` }
   )
-  /** 图文 H5 */ tuwen:
-    | { tag: '班级作业', title: string, jump_url: string }
-    | { tag: string, title: string, desc: string, jump_url: string }
-  /** 图文卡片 */ feed: {
+  /** 图文 H5 */ tuwen: {
+    ark_name: '图文H5'
+    title: string
     jump_url: string
+    /** @type `[分享]${this['title']}` */
+    prompt: `[分享]${string}`
+  } & (
+    | { tag: '班级作业' }
+    | { tag: string, desc: string }
+  )
+  /** 图文卡片 */ feed: {
+    ark_name: '图文卡片'
     tag: '群相册'
     title: `群相册《${string}》`
-    /** @type this['title'] */ prompt: `群相册《${string}》`
+    /** @type `群相册《${this['title']}》` */
+    jump_url: string
+    prompt: `群相册《${string}》`
   }
   /** 小程序 */ miniapp: {
     ark_name: '小程序'
@@ -187,13 +196,15 @@ export interface KnownArkDataTypes {
     preview: string
     source: string
     source_logo: string
-    /** @type `[QQ小程序]${this['title']}` */ prompt: `[QQ小程序]${string}`
+    /** @type `[QQ小程序]${this['title']}` */
+    prompt: `[QQ小程序]${string}`
   }
   /** 位置卡片 */ map: {
     ark_name: '位置卡片'
     address: string
     desc: string
-    /** @type `[位置]${this['desc']}` */ prompt: `[位置]${string}`
+    /** @type `[位置]${this['desc']}` */
+    prompt: `[位置]${string}`
   }
   /** 好友名片 */ contact_card: {
     ark_name: '好友名片'
@@ -201,12 +212,14 @@ export interface KnownArkDataTypes {
   } & ({
     tag: '推荐好友'
     nickname: string
-    /** @type `账号：${this['uin']}` */ contact: `账号：${number}`
+    /** @type `账号：${this['uin']}` */
+    contact: `账号：${number}`
     /** @type `http://thirdqq.qlogo.cn/g?b=oidb&k=${this['uin']}&kti=${this['uin']}&s=140` */
     avatar: `http://thirdqq.qlogo.cn/g?b=oidb&k=${string}&kti=${string}&s=140`
     /** @type `mqqapi://card/show_pslcard?src_type=internal&source=sharecard&version=1&uin=${this['uin']}` */
     jumpUrl: `mqqapi://card/show_pslcard?src_type=internal&source=sharecard&version=1&uin=${number}`
-    /** @type `推荐联系人：${this['nickname']}` */ prompt: `推荐联系人：${string}`
+    /** @type `推荐联系人：${this['nickname']}` */
+    prompt: `推荐联系人：${string}`
   } | {
     tag: '群名片'
     nickname: string
@@ -227,6 +240,8 @@ export interface KnownArkDataTypes {
     songId: string
     title: '一起听歌'
     type: 'music_invite' | unknown
+    /** @type `[开启了一起听歌] ${this['desc']}` */
+    prompt: `[开启了一起听歌] ${string}`
   }
 }
 
