@@ -5,6 +5,10 @@ import * as QQ from './types'
 
 export type DispatchEventMap = {
   [T in keyof QQ.DispatchEvents as Lowercase<T>]: [data: QQ.DispatchEvents[T]]
+} & {
+  '*': {
+    [T in keyof QQ.DispatchEvents]: [event: Lowercase<T>, data: QQ.DispatchEvents[T]]
+  }[keyof QQ.DispatchEvents]
 }
 
 export default class QQBotWS extends EventEmitter<DispatchEventMap> {
@@ -48,7 +52,7 @@ export default class QQBotWS extends EventEmitter<DispatchEventMap> {
       session_id: this.sessionId,
       seq: this.seq!,
     })
-    await new Promise(resolve => this.on('resumed', resolve))
+    await new Promise(resolve => this.once('resumed', resolve))
   }
 
   onmessage(event: MessageEvent): void {
@@ -67,8 +71,9 @@ export default class QQBotWS extends EventEmitter<DispatchEventMap> {
   }
 
   dispatch(payload: QQ.Payload<QQ.OpCode.Dispatch>): void {
-    this.emit('dispatch', payload.t, payload.d)
-    this.emit(payload.t.toLowerCase(), payload.d)
+    const type = payload.t.toLowerCase()
+    this.emit('*', type as any, payload.d)
+    this.emit(type, payload.d)
   }
 
   async hello(interval: number): Promise<void> {
