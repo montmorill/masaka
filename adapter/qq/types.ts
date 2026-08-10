@@ -352,8 +352,22 @@ export enum OpCode {
   /** 服务端通知客户端重新连接 */ Reconnect = 7,
   /** Identify 或 Resume 参数错误 */ InvalidSession = 9,
   /** 服务端下发的第一条消息 */ Hello = 10,
-  HeartbeatAck = 11,
-  HttpCallbackAck = 12,
+  /** 当发送心跳成功之后，就会收到该消息 */ HeartbeatAck = 11,
+}
+
+export namespace OpCode {
+  export function toString(op: OpCode): string {
+    return {
+      [OpCode.Dispatch]: 'dispatch',
+      [OpCode.Heartbeat]: 'heartbeat',
+      [OpCode.Identify]: 'identify',
+      [OpCode.Resume]: 'resume',
+      [OpCode.Reconnect]: 'reconnect',
+      [OpCode.InvalidSession]: 'invalid session',
+      [OpCode.Hello]: 'hello',
+      [OpCode.HeartbeatAck]: 'heartbeat ack',
+    }[op]
+  }
 }
 
 export interface PayloadData {
