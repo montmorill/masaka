@@ -49,6 +49,7 @@ export enum Intents {
    * - C2C_MSG_REJECT           ：用户在机器人资料卡手动关闭「主动消息」推送
    * - C2C_MSG_RECEIVE          ：用户在机器人资料卡手动开启「主动消息」推送
    * - GROUP_AT_MESSAGE_CREATE  ：用户在群里 @ 机器人收到的消息
+   * - GROUP_MESSAGE_CREATE     ：全量模式下群里的每一条消息
    * - GROUP_ADD_ROBOT          ：机器人被添加到群聊
    * - GROUP_DEL_ROBOT          ：机器人被移出群聊
    * - GROUP_MSG_REJECT         ：群管理员在机器人资料页操作关闭通知
@@ -128,6 +129,10 @@ export interface MessageScene {
 
 export enum MessageType {
   Text = 0,
+  Ark = 3,
+  Parallel = 101,
+  Forward = 102,
+  Quote = 103,
 }
 
 export interface User {
@@ -138,50 +143,129 @@ export interface User {
 }
 
 export interface GroupMember {
-  bot: false
   id: string
-  member_openid: string
-  member_role: 'owner' | 'admin' | 'member'
-  union_openid: '' | string
   username: string
+  bot: boolean
+  union_openid: '' | string
+  union_user_account?: string
+  member_openid?: string
+  member_role: 'owner' | 'admin' | 'member'
 }
 
-export type MessageAttachment = {
-  filename: string
-  size: number
-  url: string
-} & (
-  | { content_type: 'file' }
-  | {
-    content_type: 'image/png' | 'image/jpeg' | 'image/gif'
-    width: number
-    height: number
-    content: '' | unknown
-  }
-  | {
-    content_type: 'voice'
-    voice_wav_url: string
-    asr_refer_text: string
-  }
-)
-
-export interface ArkData {
-  ark_name: string
-  ark_type: string
-  fields: Record<string, string>
-  prompt: string
+export interface MessageAttachmentContentTypes {
+  'voice': { voice_wav_url: string, asr_refer_text: string }
+  'image/jpeg': { width: number, height: number, content: '' | unknown }
+  'image/png': { width: number, height: number, content: '' | unknown }
+  'image/gif': { width: number, height: number, content: '' | unknown }
+  'video/mp4': { width: number, height: number }
+  'file': object
 }
 
-export interface GroupMessage {
-  author: GroupMember
-  content: string
-  group_id: string
-  group_openid: this['group_id']
-  id: MessageId
-  message_scene: MessageScene
-  message_type: MessageType
-  timestamp: string
-  attachments?: MessageAttachment[]
+export type MessageAttachment =
+  { url: string, filename: string, size: number } & {
+    [K in keyof MessageAttachmentContentTypes]:
+    { content_type: K } & MessageAttachmentContentTypes[K]
+  }[keyof MessageAttachmentContentTypes]
+
+export interface KnownArkDataTypes {
+  unknown: { ark_name: '' } & (
+    | { prompt: '[分享]空间说说' }
+    | { prompt: `创建了群相册《${string}》` }
+  )
+  /** 图文 H5 */ tuwen:
+    | { tag: '班级作业', title: string, jump_url: string }
+    | { tag: string, title: string, desc: string, jump_url: string }
+  /** 图文卡片 */ feed: {
+    jump_url: string
+    tag: '群相册'
+    title: `群相册《${string}》`
+    /** @type this['title'] */ prompt: `群相册《${string}》`
+  }
+  /** 小程序 */ miniapp: {
+    ark_name: '小程序'
+    title: string
+    preview: string
+    source: string
+    source_logo: string
+    /** @type `[QQ小程序]${this['title']}` */ prompt: `[QQ小程序]${string}`
+  }
+  /** 位置卡片 */ map: {
+    ark_name: '位置卡片'
+    address: string
+    desc: string
+    /** @type `[位置]${this['desc']}` */ prompt: `[位置]${string}`
+  }
+  /** 好友名片 */ contact_card: {
+    ark_name: '好友名片'
+    type: 'contact'
+  } & ({
+    tag: '推荐好友'
+    nickname: string
+    /** @type `账号：${this['uin']}` */ contact: `账号：${number}`
+    /** @type `http://thirdqq.qlogo.cn/g?b=oidb&k=${this['uin']}&kti=${this['uin']}&s=140` */
+    avatar: `http://thirdqq.qlogo.cn/g?b=oidb&k=${string}&kti=${string}&s=140`
+    /** @type `mqqapi://card/show_pslcard?src_type=internal&source=sharecard&version=1&uin=${this['uin']}` */
+    jumpUrl: `mqqapi://card/show_pslcard?src_type=internal&source=sharecard&version=1&uin=${number}`
+    /** @type `推荐联系人：${this['nickname']}` */ prompt: `推荐联系人：${string}`
+  } | {
+    tag: '群名片'
+    nickname: string
+    contact: '在这里，发现更多~'
+    /** @type `https://p.qlogo.cn/gh/${this['uin']}/${this['uin']}/100` */
+    avatar: `https://p.qlogo.cn/gh/${number}/${number}/100`
+    /** @type  `mqqapi://card/show_pslcard?authSig=${string}&card_type=group&src_type=internal&uin=${this['uin']}&version=1&wSourceSubID=40001` */
+    jumpUrl: `mqqapi://card/show_pslcard?authSig=${string}&card_type=group&src_type=internal&uin=${number}&version=1&wSourceSubID=40001`
+    /** @type `群名片：${this['nickname']}` */ prompt: `群名片: ${string}`
+  })
+  /** 视频分享 */ video_share: unknown
+  /** 一起听歌 */ music_together: {
+    ark_name: '一起听歌'
+    button: '加入一起听歌'
+    cover: `http://img.tencentmusic.com/${string}`
+    desc: string
+    inviteType: 'listen' | unknown
+    songId: string
+    title: '一起听歌'
+    type: 'music_invite' | unknown
+  }
+}
+
+export interface ArkData<T extends string = string> {
+  /** 卡片消息类型标识 */ ark_type: T
+  /** 卡片消息类型的中文名称 */ ark_name:
+  KnownArkDataTypes extends Record<T, { ark_name: string }>
+    ? KnownArkDataTypes[T]['ark_name'] : string
+  /** 卡片消息字段 */ fields: T extends keyof KnownArkDataTypes
+    ? Omit<KnownArkDataTypes[T], 'ark_name' | 'prompt'>
+    : Record<string, string>
+  /** 卡片消息中的用户操作提示文本 */ prompt:
+  KnownArkDataTypes extends Record<T, { prompt: string }>
+    ? KnownArkDataTypes[T]['prompt'] : string
+}
+
+export interface MsgElement<T extends MessageType = MessageType> {
+  /** 消息元素在列表中的引用消息索引 */ msg_idx: RefIdx
+  /** 该元素对应的消息发送者 */ author: never | unknown
+  /** 消息内容类型 */ message_type: T
+  /** 消息正文内容 */ content: string
+  /** 该元素携带的附件 */ attachments?: MessageAttachment[]
+  /** 结构化卡片消息数据 */ ark_data: T extends MessageType.Ark ? ArkData : never
+  /** 嵌套消息元素列表 */ msg_elements?: MsgElement[]
+}
+
+export interface GroupMessage<T extends MessageType = MessageType> {
+  /** @ 消息 ID，可用于被动回复和撤回 */ id: MessageId
+  /** 发送者 */ author: GroupMember
+  /** 消息文本内容（已去除@机器人的前缀） */ content: string
+  /** @deprecated */ group_id: string
+  /** 群 OpenID */ group_openid: string
+  /** 消息发送时间，RFC3339 格式 */ timestamp: string
+  /** 消息内容类型（同 C2C_MESSAGE_CREATE） */ message_type: T
+  /** 消息场景上下文 */ message_scene: MessageScene
+  /** 消息附件 */ attachments?: MessageAttachment[]
+  /** 消息中@的用户列表（不含@机器人自身） */ mentions?: GroupMember[]
+  /** 结构化卡片消息数据 */ ark_data: T extends MessageType.Ark ? ArkData : never
+  /** 消息元素列表 */ msg_elements: MsgElement[]
 }
 
 export interface DispatchEvents {
@@ -212,14 +296,18 @@ export interface DispatchEvents {
   FRIEND_DEL: unknown
   C2C_MSG_REJECT: unknown
   C2C_MSG_RECEIVE: unknown
-  GROUP_AT_MESSAGE_CREATE: GroupMessage
-  GROUP_MESSAGE_CREATE: GroupMessage
-  GROUP_ADD_ROBOT: {
-    group_openid: string
-    op_member_openid: string
-    timestamp: number
+  /** 群 @ 机器人消息 */ GROUP_AT_MESSAGE_CREATE: GroupMessage
+  /** 群全量消息 */ GROUP_MESSAGE_CREATE: GroupMessage
+  /** 机器人加入群聊 */ GROUP_ADD_ROBOT: {
+    /** 加入时间戳（Unix 秒） */ timestamp: number
+    /** 群 OpenID */ group_openid: string
+    /** 操作添加机器人进群的群成员 OpenID */op_member_openid: string
   }
-  GROUP_DEL_ROBOT: this['GROUP_ADD_ROBOT']
+  /** 机器人退出群聊 */ GROUP_DEL_ROBOT: {
+    /** 移除时间戳（Unix 秒） */ timestamp: number
+    /** 群 OpenID */ group_openid: string
+    /** 操作移除机器人退群的群成员 OpenID */op_member_openid: string
+  }
   GROUP_MSG_REJECT: unknown
   GROUP_MSG_RECEIVE: unknown
   INTERACTION_CREATE: unknown
