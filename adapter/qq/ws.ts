@@ -19,10 +19,18 @@ export default class QQBotWS extends EventEmitter<QQ.DispatchEventMap
   readonly user!: QQ.User
   readonly shard!: QQ.Shard
 
+  private setup(): void {
+    this.inner.onmessage = event => this.onmessage(event)
+    this.inner.onerror = () => this.reconnect()
+    this.inner.onclose = () => this.reconnect()
+    this.once('hello', interval =>
+      setInterval(() => this.send(QQ.OpCode.Heartbeat, this.seq), interval))
+  }
+
   static async create(bot: QQBot, intents: QQ.Intents): Promise<QQBotWS> {
     const gateway = await bot.gateway()
     const ws = new QQBotWS(bot, intents, new WebSocket(gateway.url))
-    ws.setupInner()
+    ws.setup()
     ws.once('hello', () => ws.send(QQ.OpCode.Identify, {
       token: `QQBot ${bot.accessToken}`,
       intents,
@@ -40,19 +48,11 @@ export default class QQBotWS extends EventEmitter<QQ.DispatchEventMap
     }))
   }
 
-  private setupInner(): void {
-    this.inner.onmessage = event => this.onmessage(event)
-    // this.inner.onerror = () => this.reconnect()
-    // this.inner.onclose = () => this.reconnect()
-    this.once('hello', interval =>
-      setInterval(() => this.send(QQ.OpCode.Heartbeat, this.seq), interval))
-  }
-
   async reconnect(): Promise<void> {
     this.inner.close()
     const gateway = await this.bot.gateway()
     this.inner = new WebSocket(gateway.url)
-    this.setupInner()
+    this.setup()
     this.once('hello', () => this.send(QQ.OpCode.Resume, {
       token: `QQBot ${this.bot.accessToken}`,
       session_id: this.sessionId,
