@@ -116,6 +116,7 @@ export namespace Intents {
 }
 
 export type Shard = [number, number]
+export type AccessToken = `QQBot ${string}`
 export type MessageId = `ROBOT1.0_${string}`
 export type RefIdx = `REFIDX_${string}`
 
@@ -380,14 +381,14 @@ export interface PayloadData {
   }[keyof DispatchEvents]
   [OpCode.Heartbeat]: number | null
   [OpCode.Identify]: {
-    token: string
+    token: AccessToken
     intents: Intents
     shard?: Shard
     properties?: Record<string, any>
   }
   [OpCode.Reconnect]: { d: never }
   [OpCode.Resume]: {
-    token: string
+    token: AccessToken
     session_id: string
     seq: number
   }

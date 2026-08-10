@@ -1,15 +1,22 @@
 import type QQBot from './bot'
 import assert from 'node:assert'
 import { EventEmitter } from 'node:events'
+import { logger } from '@yarkjs/logger'
 import * as QQ from './types'
 
-export type DispatchEventMap =
-  { [T in keyof QQ.DispatchEvents as Lowercase<T>]: [data: QQ.DispatchEvents[T]] }
-  & Record<'*', {
-    [T in keyof QQ.DispatchEvents]: [event: Lowercase<T>, data: QQ.DispatchEvents[T]]
-  }[keyof QQ.DispatchEvents]>
+export type DispatchEventMap = {
+  [T in keyof QQ.DispatchEvents as Lowercase<T>]: [data: QQ.DispatchEvents[T]]
+} & {
+  hello: [interval: number]
+}
 
 export default class QQBotWS extends EventEmitter<DispatchEventMap> {
+  private constructor(
+    public bot: QQBot,
+    public intents: QQ.Intents,
+    public inner: WebSocket,
+  ) { super() }
+
   private seq: number | null = null
 
   readonly version!: 1
@@ -17,39 +24,45 @@ export default class QQBotWS extends EventEmitter<DispatchEventMap> {
   readonly user!: QQ.User
   readonly shard!: QQ.Shard
 
-  private constructor(
-    public bot: QQBot,
-    public intents: QQ.Intents,
-    public inner: WebSocket,
-  ) { super({ captureRejections: true }) }
-
   static async create(bot: QQBot, intents: QQ.Intents): Promise<QQBotWS> {
     const gateway = await bot.gateway()
     const ws = new QQBotWS(bot, intents, new WebSocket(gateway.url))
-    ws.inner.onmessage = ws.onmessage.bind(ws)
-    ws.inner.onerror = () => ws.reconnect()
-    ws.inner.onclose = () => ws.reconnect()
+    ws.setupInner()
+    ws.once('hello', () => ws.send(QQ.OpCode.Identify, {
+      token: `QQBot ${bot.accessToken}`,
+      intents,
+      shard: [0, 1],
+    }))
 
     return Object.assign(ws, await new Promise((resolve) => {
       ws.once('ready', (payload) => {
         assert(payload.version === 1)
+        ;(payload as unknown as { sessionId: string })
+          .sessionId = payload.session_id
+        delete (payload as { session_id?: string }).session_id
         resolve(payload)
       })
     }))
+  }
+
+  private setupInner(): void {
+    this.inner.onmessage = event => this.onmessage(event)
+    // this.inner.onerror = () => this.reconnect()
+    // this.inner.onclose = () => this.reconnect()
+    this.once('hello', interval =>
+      setInterval(() => this.send(QQ.OpCode.Heartbeat, this.seq), interval))
   }
 
   async reconnect(): Promise<void> {
     this.inner.close()
     const gateway = await this.bot.gateway()
     this.inner = new WebSocket(gateway.url)
-    this.inner.onmessage = this.onmessage.bind(this)
-    this.inner.onerror = () => this.reconnect()
-    this.inner.onclose = () => this.reconnect()
-    this.inner.onopen = () => this.send(QQ.OpCode.Resume, {
-      token: this.bot.accessToken!,
+    this.setupInner()
+    this.once('hello', () => this.send(QQ.OpCode.Resume, {
+      token: `QQBot ${this.bot.accessToken}`,
       session_id: this.sessionId,
       seq: this.seq!,
-    })
+    }))
     await new Promise(resolve => this.once('resumed', resolve))
   }
 
@@ -57,36 +70,36 @@ export default class QQBotWS extends EventEmitter<DispatchEventMap> {
     const payload: QQ.Payload = JSON.parse(event.data)
     if (payload.s)
       this.seq = payload.s
+    payload.d !== undefined && logger.log(
+      'recv',
+      QQ.OpCode.toString(payload.op),
+      ...payload.op === QQ.OpCode.Dispatch ? [payload.t] : [],
+      payload.d,
+    )
     switch (payload.op) {
       /* eslint-disable style/max-statements-per-line */
       case QQ.OpCode.Dispatch: this.dispatch(payload); break
-      case QQ.OpCode.Reconnect: this.reconnect(); break
-      case QQ.OpCode.Hello: this.hello(payload.d.heartbeat_interval); break
+      case QQ.OpCode.Heartbeat: this.send(QQ.OpCode.HeartbeatAck); break
+      case QQ.OpCode.InvalidSession: throw new Error('invalid session')
+      case QQ.OpCode.Hello: this.emit('hello', payload.d.heartbeat_interval); break
       case QQ.OpCode.HeartbeatAck: break
       default: console.warn('unknown payload', payload); break
-      /* eslint-enable style/max-statements-per-line */
+        /* eslint-enable style/max-statements-per-line */
     }
   }
 
   dispatch(payload: QQ.Payload<QQ.OpCode.Dispatch>): void {
-    const type = payload.t.toLowerCase()
-    this.emit('*', type as any, payload.d)
-    this.emit(type, payload.d)
+    this.emit(payload.t.toLowerCase(), payload.d)
   }
 
-  async hello(interval: number): Promise<void> {
-    setInterval(() => this.send(QQ.OpCode.Heartbeat, this.seq), interval)
-    this.send(QQ.OpCode.Identify, {
-      token: `QQBot ${this.bot.accessToken}`,
-      intents: this.intents,
-      shard: [0, 1],
-    })
-  }
-
-  async send<Op extends keyof QQ.PayloadData>(
+  send<Op extends keyof QQ.PayloadData>(
     op: Op,
-    d: QQ.PayloadData[Op],
-  ): Promise<void> {
+    ...[d]: { d: never } extends QQ.PayloadData[Op] ? [] : [QQ.PayloadData[Op]]
+  ): void {
+    if (d === undefined)
+      return this.inner.send(JSON.stringify({ op }))
+    if (op !== QQ.OpCode.Heartbeat)
+      logger.log('send', QQ.OpCode.toString(op), d)
     this.inner.send(JSON.stringify({ op, d }))
   }
 }
