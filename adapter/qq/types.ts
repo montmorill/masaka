@@ -100,18 +100,7 @@ export enum Intents {
 }
 
 export namespace Intents {
-  export const ALL = 0
-    | Intents.GUILDS
-    | Intents.GUILD_MEMBERS
-    | Intents.GUILD_MESSAGES
-    | Intents.GUILD_MESSAGE_REACTIONS
-    | Intents.DIRECT_MESSAGE
-    | Intents.GROUP_AND_C2C_EVENT
-    | Intents.INTERACTION
-    | Intents.MESSAGE_AUDIT
-    | Intents.FORUMS_EVENT
-    | Intents.AUDIO_ACTION
-    | Intents.PUBLIC_GUILD_MESSAGES
+  export const ALL = 1 << 31 - 1
 }
 
 export type Shard = [number, number]
