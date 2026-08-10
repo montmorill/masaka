@@ -116,11 +116,35 @@ export namespace Intents {
 
 export type Shard = [number, number]
 
+export type MessageId = `ROBOT1.0_${string}`
+export type RefIdx = `REFIDX_${string}`
+
+export interface MessageScene {
+  ext: [
+    `msg_idx=${RefIdx}`,
+    `auth_token=${string}`,
+  ]
+  source: 'default'
+}
+
+export enum MessageType {
+  Text = 0,
+}
+
 export interface User {
   id: string
   username: string
   bot: true
   status: 1 | unknown
+}
+
+export interface GroupMember {
+  bot: false
+  id: string
+  member_openid: string
+  member_role: 'owner' | 'admin' | 'member'
+  union_openid: '' | string
+  username: string
 }
 
 export interface DispatchEvents {
@@ -130,6 +154,8 @@ export interface DispatchEvents {
     user: User
     shard: Shard
   }
+  RESUMED: ''
+
   GUILD_CREATE: unknown
   GUILD_UPDATE: unknown
   GUILD_DELETE: unknown
@@ -150,8 +176,31 @@ export interface DispatchEvents {
   FRIEND_DEL: unknown
   C2C_MSG_REJECT: unknown
   C2C_MSG_RECEIVE: unknown
-  GROUP_AT_MESSAGE_CREATE: unknown
-  GROUP_ADD_ROBOT: unknown
+  GROUP_AT_MESSAGE_CREATE: {
+    author: GroupMember
+    content: string
+    /** @deprecated */ group_id: string
+    group_openid: string
+    id: MessageId
+    message_scene: MessageScene
+    message_type: MessageType
+    timestamp: string
+  }
+  GROUP_MESSAGE_CREATE: {
+    author: GroupMember
+    content: string
+    /** @deprecated */ group_id: string
+    group_openid: string
+    id: MessageId
+    message_scene: MessageScene
+    message_type: MessageType
+    timestamp: string
+  }
+  GROUP_ADD_ROBOT: {
+    group_openid: string
+    op_member_openid: string
+    timestamp: number
+  }
   GROUP_DEL_ROBOT: unknown
   GROUP_MSG_REJECT: unknown
   GROUP_MSG_RECEIVE: unknown
@@ -190,6 +239,7 @@ export interface PayloadData {
   [OpCode.Dispatch]: {
     [Type in keyof DispatchEvents]: {
       t: Type
+      id: `${Type}:${string}`
       d: DispatchEvents[Type]
     }
   }[keyof DispatchEvents]
@@ -201,7 +251,11 @@ export interface PayloadData {
     properties?: Record<string, any>
   }
   [OpCode.Reconnect]: unknown
-  [OpCode.Resume]: unknown
+  [OpCode.Resume]: {
+    token: string
+    session_id: string
+    seq: number
+  }
   [OpCode.InvalidSession]: false
   [OpCode.Hello]: { heartbeat_interval: number }
   [OpCode.HeartbeatAck]: unknown
