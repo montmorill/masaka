@@ -1,6 +1,6 @@
 import type { Overwrite, Pretty } from './types'
 
-export * from './types'
+export type * from './types'
 
 export const lazy = (inner: any) => () => inner
 

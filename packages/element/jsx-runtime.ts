@@ -48,12 +48,18 @@ export type JSXElements = Merge<ElementProps, {
         ? F extends Fragment ? object : [] extends R ? F : F
         : Elements[T]
       : Elements[T]
-  >> & { children?: Fragment | Fragment[] }
+  >>
 }>
+
+type JSXElementsWithChildren = {
+  [T in keyof JSXElements]: JSXElements[T] & {
+    children?: Fragment | Fragment[]
+  }
+}
 
 declare global {
   namespace JSX {
-    interface IntrinsicElements extends JSXElements {}
+    interface IntrinsicElements extends JSXElementsWithChildren {}
     type Element = InstanceType<{
       [T in keyof JSXElements]: typeof Element<T>
     }[keyof JSXElements]>
