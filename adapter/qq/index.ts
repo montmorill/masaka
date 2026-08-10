@@ -11,5 +11,6 @@ if (!env.QQ_APP_ID || !env.QQ_SECRET)
 
 const bot = await QQBot.create(env.QQ_APP_ID, env.QQ_SECRET)
 logger.info('bot connected', bot.appId)
+
 const ws = await QQBotWS.create(bot, QQ.Intents.ALL)
 logger.info('websocket connected', ws.sessionId)
