@@ -115,7 +115,6 @@ export namespace Intents {
 }
 
 export type Shard = [number, number]
-
 export type MessageId = `ROBOT1.0_${string}`
 export type RefIdx = `REFIDX_${string}`
 
@@ -147,6 +146,71 @@ export interface GroupMember {
   username: string
 }
 
+export interface ArkData {
+  ark_name: string
+  ark_type: string
+  fields: Record<string, string>
+  prompt: string
+}
+
+export interface KnownArkData {
+  tuwen: {
+    ark_name: '图文H5'
+    fields: {
+      title: string
+      desc: string
+      tag: string
+      jump_url: string
+    }
+  }
+  miniapp: {
+    ark_name: '小程序'
+    fields: {
+      title: string
+      preview: string
+      source: string
+      source_logo: string
+    }
+  }
+}
+
+export type MessageAttachment = {
+  filename: string
+  size: number
+  url: string
+} & (
+  | { content_type: 'file' }
+  | {
+    content_type: 'image/png' | 'image/jpeg' | 'image/gif'
+    width: number
+    height: number
+    content: '' | unknown
+  }
+  | {
+    content_type: 'voice'
+    voice_wav_url: string
+    asr_refer_text: string
+  }
+)
+
+export interface GroupMessage {
+  author: GroupMember
+  content: string
+  group_id: string
+  group_openid: this['group_id']
+  id: MessageId
+  message_scene: MessageScene
+  message_type: MessageType
+  timestamp: string
+  attachments?: MessageAttachment[]
+  ark_data?: ArkData | {
+    [T in keyof KnownArkData]: {
+      ark_type: T
+      prompt: string
+    } & KnownArkData[T] & {}
+  }[keyof KnownArkData]
+}
+
 export interface DispatchEvents {
   READY: {
     version: 1
@@ -155,7 +219,6 @@ export interface DispatchEvents {
     shard: Shard
   }
   RESUMED: ''
-
   GUILD_CREATE: unknown
   GUILD_UPDATE: unknown
   GUILD_DELETE: unknown
@@ -176,32 +239,14 @@ export interface DispatchEvents {
   FRIEND_DEL: unknown
   C2C_MSG_REJECT: unknown
   C2C_MSG_RECEIVE: unknown
-  GROUP_AT_MESSAGE_CREATE: {
-    author: GroupMember
-    content: string
-    /** @deprecated */ group_id: string
-    group_openid: string
-    id: MessageId
-    message_scene: MessageScene
-    message_type: MessageType
-    timestamp: string
-  }
-  GROUP_MESSAGE_CREATE: {
-    author: GroupMember
-    content: string
-    /** @deprecated */ group_id: string
-    group_openid: string
-    id: MessageId
-    message_scene: MessageScene
-    message_type: MessageType
-    timestamp: string
-  }
+  GROUP_AT_MESSAGE_CREATE: GroupMessage
+  GROUP_MESSAGE_CREATE: GroupMessage
   GROUP_ADD_ROBOT: {
     group_openid: string
     op_member_openid: string
     timestamp: number
   }
-  GROUP_DEL_ROBOT: unknown
+  GROUP_DEL_ROBOT: this['GROUP_ADD_ROBOT']
   GROUP_MSG_REJECT: unknown
   GROUP_MSG_RECEIVE: unknown
   INTERACTION_CREATE: unknown
@@ -250,7 +295,7 @@ export interface PayloadData {
     shard?: Shard
     properties?: Record<string, any>
   }
-  [OpCode.Reconnect]: unknown
+  [OpCode.Reconnect]: { d: never }
   [OpCode.Resume]: {
     token: string
     session_id: string
@@ -258,8 +303,7 @@ export interface PayloadData {
   }
   [OpCode.InvalidSession]: false
   [OpCode.Hello]: { heartbeat_interval: number }
-  [OpCode.HeartbeatAck]: unknown
-  [OpCode.HeartbeatAck]: unknown
+  [OpCode.HeartbeatAck]: { d: never }
 }
 
 export type Payload<Op extends keyof PayloadData = keyof PayloadData> = {
