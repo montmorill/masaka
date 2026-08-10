@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@yarkjs/element": "workspace:^",
+    "@yarkjs/logger": "workspace:^",
     "@yarkjs/utils": "workspace:^"
   },
   "devDependencies": {

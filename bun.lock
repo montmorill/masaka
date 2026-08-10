@@ -6,6 +6,7 @@
       "name": "@yarkjs/workspace",
       "dependencies": {
         "@yarkjs/element": "workspace:^",
+        "@yarkjs/logger": "workspace:^",
         "@yarkjs/utils": "workspace:^",
       },
       "devDependencies": {
@@ -26,6 +27,10 @@
       "devDependencies": {
         "@types/commonmark": "^0.27.10",
       },
+    },
+    "packages/logger": {
+      "name": "@yarkjs/logger",
+      "version": "0.0.0",
     },
     "packages/utils": {
       "name": "@yarkjs/utils",
@@ -154,6 +159,8 @@
     "@vue/shared": ["@vue/shared@3.5.40", "", {}, "sha512-WxnBtruIqOoV3rA4jeKDWzrYI5h7Cp4+pjwDi8kWGHz+IslhiN+wguLVVhtv2l8VoU02rzDCVfDjgCl1lNpZVg=="],
 
     "@yarkjs/element": ["@yarkjs/element@workspace:packages/element"],
+
+    "@yarkjs/logger": ["@yarkjs/logger@workspace:packages/logger"],
 
     "@yarkjs/utils": ["@yarkjs/utils@workspace:packages/utils"],
 
