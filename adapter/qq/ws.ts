@@ -43,8 +43,7 @@ export default class QQBotWS extends EventEmitter<DispatchEventMap> {
     this.inner.onmessage = this.onmessage.bind(this)
     this.inner.onerror = () => this.reconnect()
     this.inner.onclose = () => this.reconnect()
-
-    this.send(QQ.OpCode.Resume, {
+    this.inner.onopen = () => this.send(QQ.OpCode.Resume, {
       token: this.bot.accessToken!,
       session_id: this.sessionId,
       seq: this.seq!,
