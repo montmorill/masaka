@@ -10,5 +10,7 @@ if (!env.QQ_APP_ID || !env.QQ_SECRET)
   throw new Error('QQ_APP_ID or QQ_SECRET is not provided')
 
 const bot = await QQBot.create(env.QQ_APP_ID, env.QQ_SECRET)
+console.log('bot connected')
 const ws = await QQBotWS.create(bot, QQ.Intents.ALL)
+console.log('websocket connected')
 ws.on('dispatch', console.log)
