@@ -5,7 +5,7 @@ export default class QQBot {
     public baseUrl: string,
   ) {}
 
-  accessToken: string | null = null
+  accessToken!: string
 
   static async create(
     appId: string,
