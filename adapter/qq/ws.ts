@@ -4,13 +4,8 @@ import { EventEmitter } from 'node:events'
 import { logger } from '@yarkjs/logger'
 import * as QQ from './types'
 
-export type DispatchEventMap = {
-  [T in keyof QQ.DispatchEvents as Lowercase<T>]: [data: QQ.DispatchEvents[T]]
-} & {
-  hello: [interval: number]
-}
-
-export default class QQBotWS extends EventEmitter<DispatchEventMap> {
+export default class QQBotWS extends EventEmitter<QQ.DispatchEventMap
+  & { hello: [interval: number] }> {
   private constructor(
     public bot: QQBot,
     public intents: QQ.Intents,

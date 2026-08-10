@@ -345,6 +345,10 @@ export interface DispatchEvents {
   PUBLIC_MESSAGE_DELETE: unknown
 }
 
+export type DispatchEventMap = {
+  [T in keyof DispatchEvents]: [data: DispatchEvents[T]]
+}
+
 export enum OpCode {
   /** 服务端进行消息推送 */ Dispatch = 0,
   /** 客户端或服务端发送心跳 */ Heartbeat = 1,
