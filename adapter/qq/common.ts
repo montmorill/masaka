@@ -285,13 +285,6 @@ export interface GroupMessage<T extends MessageType = MessageType> {
 }
 
 export interface DispatchEvents {
-  READY: {
-    version: 1
-    session_id: string
-    user: User
-    shard: Shard
-  }
-  RESUMED: ''
   GUILD_CREATE: unknown
   GUILD_UPDATE: unknown
   GUILD_DELETE: unknown
@@ -349,60 +342,10 @@ export type DispatchEventMap = {
   [T in keyof DispatchEvents]: [data: DispatchEvents[T]]
 }
 
-export enum OpCode {
-  /** 服务端进行消息推送 */ Dispatch = 0,
-  /** 客户端或服务端发送心跳 */ Heartbeat = 1,
-  /** 客户端发送鉴权 */ Identify = 2,
-  /** 客户端恢复连接 */ Resume = 6,
-  /** 服务端通知客户端重新连接 */ Reconnect = 7,
-  /** Identify 或 Resume 参数错误 */ InvalidSession = 9,
-  /** 服务端下发的第一条消息 */ Hello = 10,
-  /** 当发送心跳成功之后，就会收到该消息 */ HeartbeatAck = 11,
-}
-
-export namespace OpCode {
-  export function toString(op: OpCode): string {
-    return {
-      [OpCode.Dispatch]: 'dispatch',
-      [OpCode.Heartbeat]: 'heartbeat',
-      [OpCode.Identify]: 'identify',
-      [OpCode.Resume]: 'resume',
-      [OpCode.Reconnect]: 'reconnect',
-      [OpCode.InvalidSession]: 'invalid session',
-      [OpCode.Hello]: 'hello',
-      [OpCode.HeartbeatAck]: 'heartbeat ack',
-    }[op]
+export type DispatchPayload = {
+  [T in keyof DispatchEvents]: {
+    t: T
+    id: `${T}:${string}`
+    d: DispatchEvents[T]
   }
-}
-
-export interface PayloadData {
-  [OpCode.Dispatch]: {
-    [Type in keyof DispatchEvents]: {
-      t: Type
-      id: `${Type}:${string}`
-      d: DispatchEvents[Type]
-    }
-  }[keyof DispatchEvents]
-  [OpCode.Heartbeat]: number | null
-  [OpCode.Identify]: {
-    token: AccessToken
-    intents: Intents
-    shard?: Shard
-    properties?: Record<string, any>
-  }
-  [OpCode.Reconnect]: { d: never }
-  [OpCode.Resume]: {
-    token: AccessToken
-    session_id: string
-    seq: number
-  }
-  [OpCode.InvalidSession]: false
-  [OpCode.Hello]: { heartbeat_interval: number }
-  [OpCode.HeartbeatAck]: { d: never }
-}
-
-export type Payload<Op extends keyof PayloadData = keyof PayloadData> = {
-  [Op in keyof PayloadData]: 'd' extends keyof PayloadData[Op]
-    ? { op: Op } & PayloadData[Op]
-    : { op: Op, d: PayloadData[Op] }
-}[Op] & { s?: number }
+}[keyof DispatchEvents]

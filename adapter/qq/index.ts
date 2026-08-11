@@ -3,7 +3,7 @@
 import { env } from 'node:process'
 import { logger } from '@yarkjs/logger'
 import QQBot from './bot'
-import * as QQ from './types'
+import * as QQ from './common'
 import QQBotWS from './ws'
 
 if (!env.QQ_APP_ID || !env.QQ_SECRET)

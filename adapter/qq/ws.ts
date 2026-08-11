@@ -1,11 +1,74 @@
 import type QQBot from './bot'
+import type * as QQ from './common'
 import assert from 'node:assert'
 import { EventEmitter } from 'node:events'
 import { logger } from '@yarkjs/logger'
-import * as QQ from './types'
 
-export default class QQBotWS extends EventEmitter<QQ.DispatchEventMap
-  & { hello: [interval: number] }> {
+export enum OpCode {
+  /** 服务端进行消息推送 */ Dispatch = 0,
+  /** 客户端或服务端发送心跳 */ Heartbeat = 1,
+  /** 客户端发送鉴权 */ Identify = 2,
+  /** 客户端恢复连接 */ Resume = 6,
+  /** 服务端通知客户端重新连接 */ Reconnect = 7,
+  /** Identify 或 Resume 参数错误 */ InvalidSession = 9,
+  /** 服务端下发的第一条消息 */ Hello = 10,
+  /** 当发送心跳成功之后，就会收到该消息 */ HeartbeatAck = 11,
+}
+
+export namespace OpCode {
+  export function toString(op: OpCode): string {
+    return {
+      [OpCode.Dispatch]: 'Dispatch',
+      [OpCode.Heartbeat]: 'Heartbeat',
+      [OpCode.Identify]: 'Identify',
+      [OpCode.Resume]: 'Resume',
+      [OpCode.Reconnect]: 'Reconnect',
+      [OpCode.InvalidSession]: 'InvalidSession',
+      [OpCode.Hello]: 'Hello',
+      [OpCode.HeartbeatAck]: 'HeartbeatAck',
+    }[op]
+  }
+}
+
+export interface PayloadData {
+  [OpCode.Dispatch]: QQ.DispatchPayload
+  [OpCode.Heartbeat]: number | null
+  [OpCode.Identify]: {
+    token: QQ.AccessToken
+    intents: QQ.Intents
+    shard?: QQ.Shard
+    properties?: Record<string, any>
+  }
+  [OpCode.Reconnect]: { d: never }
+  [OpCode.Resume]: {
+    token: QQ.AccessToken
+    session_id: string
+    seq: number
+  }
+  [OpCode.InvalidSession]: false
+  [OpCode.Hello]: { heartbeat_interval: number }
+  [OpCode.HeartbeatAck]: { d: never }
+}
+
+export type MaybePayloadData<Op extends keyof PayloadData = keyof PayloadData> =
+  { d: never } extends PayloadData[Op] ? [] : [PayloadData[Op]]
+
+export type Payload<Op extends keyof PayloadData = keyof PayloadData> = {
+  [Op in keyof PayloadData]: 'd' extends keyof PayloadData[Op]
+    ? { op: Op } & PayloadData[Op]
+    : { op: Op, d: PayloadData[Op] }
+}[Op] & { s?: number }
+
+export default class QQBotWS extends EventEmitter<QQ.DispatchEventMap & {
+  HELLO: [interval: number]
+  READY: [data: {
+    version: 1
+    session_id: string
+    user: QQ.User
+    shard: QQ.Shard
+  }]
+  RESUMED: [data: '']
+}> {
   private constructor(
     public bot: QQBot,
     public intents: QQ.Intents,
@@ -23,9 +86,9 @@ export default class QQBotWS extends EventEmitter<QQ.DispatchEventMap
   private setup(hello: () => void): void {
     this.inner.onmessage = event => this.onmessage(event)
     this.inner.onclose = () => this.reconnect()
-    this.once('hello', (interval) => {
+    this.once('HELLO', (interval) => {
       this.heartbeatTimeout = setInterval(() => {
-        this.send(QQ.OpCode.Heartbeat, this.seq)
+        this.send(OpCode.Heartbeat, this.seq)
       }, interval)
       hello()
     })
@@ -34,7 +97,7 @@ export default class QQBotWS extends EventEmitter<QQ.DispatchEventMap
   static async create(bot: QQBot, intents: QQ.Intents): Promise<QQBotWS> {
     const gateway = await bot.gateway()
     const ws = new QQBotWS(bot, intents, new WebSocket(gateway.url))
-    ws.setup(() => ws.send(QQ.OpCode.Identify, {
+    ws.setup(() => ws.send(OpCode.Identify, {
       token: `QQBot ${bot.accessToken}`,
       intents,
       shard: [0, 1],
@@ -57,7 +120,7 @@ export default class QQBotWS extends EventEmitter<QQ.DispatchEventMap
     clearTimeout(this.heartbeatTimeout)
     const gateway = await this.bot.gateway()
     this.inner = new WebSocket(gateway.url)
-    this.setup(() => this.send(QQ.OpCode.Resume, {
+    this.setup(() => this.send(OpCode.Resume, {
       token: `QQBot ${this.bot.accessToken}`,
       session_id: this.sessionId,
       seq: this.seq!,
@@ -66,39 +129,32 @@ export default class QQBotWS extends EventEmitter<QQ.DispatchEventMap
   }
 
   onmessage(event: MessageEvent): void {
-    const payload: QQ.Payload = JSON.parse(event.data)
+    const payload: Payload = JSON.parse(event.data)
     if (payload.s)
       this.seq = payload.s
     payload.d !== undefined && logger.log(
       'recv',
-      QQ.OpCode.toString(payload.op),
-      ...payload.op === QQ.OpCode.Dispatch ? [payload.t] : [],
+      OpCode.toString(payload.op),
+      ...payload.op === OpCode.Dispatch ? [payload.t] : [],
       payload.d,
     )
     switch (payload.op) {
       /* eslint-disable style/max-statements-per-line */
-      case QQ.OpCode.Dispatch: this.dispatch(payload); break
-      case QQ.OpCode.Heartbeat: this.send(QQ.OpCode.HeartbeatAck); break
-      case QQ.OpCode.InvalidSession: throw new Error('invalid session')
-      case QQ.OpCode.Hello: this.emit('hello', payload.d.heartbeat_interval); break
-      case QQ.OpCode.HeartbeatAck: break
+      case OpCode.Dispatch: this.emit(payload.t, payload.d); break
+      case OpCode.Heartbeat: this.send(OpCode.HeartbeatAck); break
+      case OpCode.InvalidSession: throw new Error('invalid session')
+      case OpCode.Hello: this.emit('HELLO', payload.d.heartbeat_interval); break
+      case OpCode.HeartbeatAck: break
       default: console.warn('unknown payload', payload); break
         /* eslint-enable style/max-statements-per-line */
     }
   }
 
-  dispatch(payload: QQ.Payload<QQ.OpCode.Dispatch>): void {
-    this.emit(payload.t, payload.d)
-  }
-
-  send<Op extends keyof QQ.PayloadData>(
-    op: Op,
-    ...[d]: { d: never } extends QQ.PayloadData[Op] ? [] : [QQ.PayloadData[Op]]
-  ): void {
+  send<Op extends keyof PayloadData>(op: Op, ...[d]: MaybePayloadData<Op>): void {
     if (d === undefined)
       return this.inner.send(JSON.stringify({ op }))
-    if (op !== QQ.OpCode.Heartbeat)
-      logger.log('send', QQ.OpCode.toString(op), d)
+    if (op !== OpCode.Heartbeat)
+      logger.log('send', OpCode.toString(op), d)
     this.inner.send(JSON.stringify({ op, d }))
   }
 }
