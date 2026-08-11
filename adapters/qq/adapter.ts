@@ -74,7 +74,7 @@ export class QQAdapter extends EventEmitter<Universal.EventMap> {
   decodeMessageContent(message: QQ.Message | QQ.GroupMessage): Element<'message'> {
     const { msg_idx } = this.decodeMessageScene(message.message_scene)
     if (!msg_idx?.startsWith('REFIDX_'))
-      throw new Error(`unknown refidx: ${msg_idx}`)
+      console.warn('unknown refidx', msg_idx)
     const element = h.message({ 'id': message.id, 'qq:refidx': msg_idx as any })
     element.children.push(message.content) // TODO: parse this
     return element
