@@ -1,12 +1,12 @@
 import type { IncomingHttpHeaders } from 'node:http'
 import type QQBot from './bot'
-import type * as QQ from './common'
 import { Buffer } from 'node:buffer'
 import { webcrypto } from 'node:crypto'
 import EventEmitter from 'node:events'
 import { Server } from 'node:http'
 import { buffer } from 'node:stream/consumers'
 import { logger } from '@yarkjs/logger'
+import * as QQ from './common'
 
 const ED25519_SEED_SIZE = 32
 const ED25519_PKCS8_HEADER = Buffer.from('302e020100300506032b657004220420', 'hex')
@@ -43,13 +43,14 @@ export class QQBotServer extends Server {
           res.end()
           return
         }
-        const payload = JSON.parse(body.toString('utf-8'))
-        if (payload.op === 0) {
+        const payload: QQ.Payload = JSON.parse(body.toString('utf-8'))
+        if (payload.op === QQ.OpCode.Dispatch) {
           res.statusCode = 204
-          this.emitter.emit(payload.t, payload.d, payload.id)
-          res.end()
+          this.emitter.emit(payload.t, payload.d, payload.id as any)
+          res.setHeader('Content-Type', 'application/json')
+          res.end(JSON.stringify({ op: QQ.OpCode.CallbackAck }))
         }
-        else if (payload.op === 13) {
+        else if (payload.op === QQ.OpCode.CallbackVerify) {
           const { plain_token, event_ts } = payload.d
           const signature = await this.sign(Buffer.from(event_ts + plain_token))
           res.statusCode = 200
