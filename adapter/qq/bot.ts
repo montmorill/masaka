@@ -1,3 +1,4 @@
+import type * as QQ from './common'
 import { logger } from '@yarkjs/logger'
 
 const GATEWAY_URL = 'wss://api.sgroup.qq.com/websocket'
@@ -41,7 +42,7 @@ export default class QQBot {
     setTimeout(() => this.refreshAccessToken(), Math.max(expiresIn, 0))
   }
 
-  async fetch<T>(input: string | URL | Request, init: RequestInit = {}): Promise<T> {
+  async fetch<T extends object>(input: string | URL | Request, init: RequestInit = {}): Promise<T> {
     const headers = new Headers(init.headers)
     if (this.accessToken)
       headers.set('Authorization', `QQBot ${this.accessToken}`)
@@ -50,19 +51,22 @@ export default class QQBot {
     init.headers = headers
 
     const resp = await fetch(input, init)
-    const res = await resp.json() as
-      | { err_code: number, message: string, trace_id: string }
-    if ('err_code' in res)
-      throw new Error(`${res.err_code}: ${res.message} trace_id: ${res.trace_id}`)
+    const res = await resp.json() as QQ.Error | T
+    if ('err_code' in res) {
+      const message = `${res.err_code} ${res.message} trace_id: ${res.trace_id}`
+      throw new Error(message, { cause: res })
+    }
     return res
   }
 
   async gateway(): Promise<{ url: string }> {
+    setTimeout(() => this.gateway())
     try {
       return await this.fetch('/gateway')
     }
     catch (error) {
-      logger.warn(error, 'fallback to', GATEWAY_URL)
+      if (error instanceof Error && (error.cause as QQ.Error).err_code === 40023001)
+        logger.warn('gateway', error.message, 'fallback to', GATEWAY_URL)
       return { url: GATEWAY_URL }
     }
   }

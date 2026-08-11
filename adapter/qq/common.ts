@@ -1,5 +1,11 @@
 /* eslint-disable ts/prefer-literal-enum-member */
 
+export interface Error {
+  err_code: number
+  message: string
+  trace_id: string
+}
+
 export enum Intents {
   /**
    * 频道相关事件
