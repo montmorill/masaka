@@ -41,7 +41,7 @@ export default class QQBotWS extends EventEmitter<QQ.DispatchEventMap
     }))
 
     return Object.assign(ws, await new Promise((resolve) => {
-      ws.once('ready', (payload) => {
+      ws.once('READY', (payload) => {
         assert(payload.version === 1)
         ;(payload as unknown as { sessionId: string })
           .sessionId = payload.session_id
@@ -88,7 +88,7 @@ export default class QQBotWS extends EventEmitter<QQ.DispatchEventMap
   }
 
   dispatch(payload: QQ.Payload<QQ.OpCode.Dispatch>): void {
-    this.emit(payload.t.toLowerCase(), payload.d)
+    this.emit(payload.t, payload.d)
   }
 
   send<Op extends keyof QQ.PayloadData>(
