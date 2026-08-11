@@ -1,0 +1,8 @@
+{
+  "name": "@yarkjs/adapter-qq",
+  "type": "module",
+  "version": "0.0.0",
+  "dependencies": {
+    "@yarkjs/protocol": "workspace:^"
+  }
+}

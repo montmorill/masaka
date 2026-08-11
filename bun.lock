@@ -5,8 +5,10 @@
     "": {
       "name": "@yarkjs/workspace",
       "dependencies": {
+        "@yarkjs/adapter-qq": "workspace:^",
         "@yarkjs/element": "workspace:^",
         "@yarkjs/logger": "workspace:^",
+        "@yarkjs/protocol": "workspace:^",
         "@yarkjs/utils": "workspace:^",
       },
       "devDependencies": {
@@ -14,6 +16,13 @@
         "@types/node": "^26.1.2",
         "eslint": "^10.8.0",
         "typescript": "^5.9.3",
+      },
+    },
+    "adapters/qq": {
+      "name": "@yarkjs/adapter-qq",
+      "version": "0.0.0",
+      "dependencies": {
+        "@yarkjs/protocol": "workspace:^",
       },
     },
     "packages/element": {
@@ -164,6 +173,8 @@
     "@vue/compiler-ssr": ["@vue/compiler-ssr@3.5.40", "", { "dependencies": { "@vue/compiler-dom": "3.5.40", "@vue/shared": "3.5.40" } }, "sha512-rrE5xiXG663+vHCHa3J9p2z5OcBRjXmoqenprJxAFQxg5pSshzeBiCE6pu46axapRJ2Adk0YDA2BRZVjiHXnhg=="],
 
     "@vue/shared": ["@vue/shared@3.5.40", "", {}, "sha512-WxnBtruIqOoV3rA4jeKDWzrYI5h7Cp4+pjwDi8kWGHz+IslhiN+wguLVVhtv2l8VoU02rzDCVfDjgCl1lNpZVg=="],
+
+    "@yarkjs/adapter-qq": ["@yarkjs/adapter-qq@workspace:adapters/qq"],
 
     "@yarkjs/element": ["@yarkjs/element@workspace:packages/element"],
 
