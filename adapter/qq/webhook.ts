@@ -1,13 +1,12 @@
 import type { IncomingHttpHeaders } from 'node:http'
+import type QQBot from './bot'
 import type * as QQ from './common'
 import { Buffer } from 'node:buffer'
 import { webcrypto } from 'node:crypto'
 import EventEmitter from 'node:events'
 import { Server } from 'node:http'
-import { env } from 'node:process'
 import { buffer } from 'node:stream/consumers'
 import { logger } from '@yarkjs/logger'
-import QQBot from './bot'
 
 const ED25519_SEED_SIZE = 32
 const ED25519_PKCS8_HEADER = Buffer.from('302e020100300506032b657004220420', 'hex')
@@ -25,7 +24,7 @@ async function deriveKeyPair(seedBuffer: Buffer): Promise<webcrypto.CryptoKeyPai
   return { privateKey, publicKey }
 }
 
-class QQBotServer extends Server {
+export class QQBotServer extends Server {
   emitter: EventEmitter<QQ.DispatchEventMap> = new EventEmitter()
 
   static async create(bot: QQBot): Promise<QQBotServer> {
@@ -45,17 +44,20 @@ class QQBotServer extends Server {
           return
         }
         const payload = JSON.parse(body.toString('utf-8'))
-        if (payload.op === 13) {
+        if (payload.op === 0) {
+          res.statusCode = 204
+          this.emitter.emit(payload.t, payload.d)
+          res.end()
+        }
+        else if (payload.op === 13) {
           const { plain_token, event_ts } = payload.d
           const signature = await this.sign(Buffer.from(event_ts + plain_token))
           res.statusCode = 200
           res.setHeader('Content-Type', 'application/json')
           res.end(JSON.stringify({ plain_token, signature }))
         }
-        else if (payload.op === 0) {
-          res.statusCode = 204
-          this.emitter.emit(payload.t, payload.d)
-          res.end()
+        else {
+          logger.warn('unknown payload', payload)
         }
       }
       catch (err) {
@@ -89,15 +91,3 @@ class QQBotServer extends Server {
       .verify({ name: 'Ed25519' }, this.keyPair.publicKey, sig, msg)
   }
 }
-
-if (!env.QQ_APP_ID || !env.QQ_APP_SECRET) {
-  throw new Error('QQ_APP_ID or QQ_APP_SECRET is not provided')
-}
-
-// eslint-disable-next-line antfu/no-top-level-await
-const bot = await QQBot.create(env.QQ_APP_ID, env.QQ_APP_SECRET)
-logger.info('bot connected', bot.appId)
-
-// eslint-disable-next-line antfu/no-top-level-await
-const server = await QQBotServer.create(bot)
-server.listen(8081, () => logger.info('HTTP server running on port 8081'))
