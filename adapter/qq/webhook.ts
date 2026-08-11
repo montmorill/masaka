@@ -46,7 +46,7 @@ export class QQBotServer extends Server {
         const payload = JSON.parse(body.toString('utf-8'))
         if (payload.op === 0) {
           res.statusCode = 204
-          this.emitter.emit(payload.t, payload.d)
+          this.emitter.emit(payload.t, payload.d, payload.id)
           res.end()
         }
         else if (payload.op === 13) {

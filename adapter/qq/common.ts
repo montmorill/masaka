@@ -345,7 +345,7 @@ export interface DispatchEvents {
 }
 
 export type DispatchEventMap = {
-  [T in keyof DispatchEvents]: [data: DispatchEvents[T]]
+  [T in keyof DispatchEvents]: [data: DispatchEvents[T], id: `${T}:${string}`]
 }
 
 export type DispatchPayload = {

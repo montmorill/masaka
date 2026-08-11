@@ -143,7 +143,7 @@ export default class QQBotWS extends EventEmitter<QQ.DispatchEventMap & {
     )
     switch (payload.op) {
       /* eslint-disable style/max-statements-per-line */
-      case OpCode.Dispatch: this.emit(payload.t, payload.d); break
+      case OpCode.Dispatch: this.emit(payload.t, payload.d, payload.id as any); break
       case OpCode.Heartbeat: this.send(OpCode.HeartbeatAck); break
       case OpCode.InvalidSession: this.canReconnect = false; throw new Error('invalid session')
       case OpCode.Hello: this.emit('HELLO', payload.d.heartbeat_interval); break
