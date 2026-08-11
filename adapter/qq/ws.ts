@@ -114,8 +114,11 @@ export default class QQBotWS extends EventEmitter<QQ.DispatchEventMap & {
     }))
   }
 
+  canReconnect = true
   async reconnect(): Promise<void> {
-    this.inner.onclose = null
+    if (!this.canReconnect)
+      return
+    this.canReconnect = false
     this.inner.close()
     clearTimeout(this.heartbeatTimeout)
     const gateway = await this.bot.gateway()
@@ -126,6 +129,7 @@ export default class QQBotWS extends EventEmitter<QQ.DispatchEventMap & {
       seq: this.seq!,
     }))
     await new Promise(resolve => this.once('resumed', resolve))
+    this.canReconnect = true
   }
 
   onmessage(event: MessageEvent): void {
@@ -142,10 +146,10 @@ export default class QQBotWS extends EventEmitter<QQ.DispatchEventMap & {
       /* eslint-disable style/max-statements-per-line */
       case OpCode.Dispatch: this.emit(payload.t, payload.d); break
       case OpCode.Heartbeat: this.send(OpCode.HeartbeatAck); break
-      case OpCode.InvalidSession: throw new Error('invalid session')
+      case OpCode.InvalidSession: this.canReconnect = false; throw new Error('invalid session')
       case OpCode.Hello: this.emit('HELLO', payload.d.heartbeat_interval); break
       case OpCode.HeartbeatAck: break
-      default: console.warn('unknown payload', payload); break
+      default: logger.warn('unknown payload', payload); break
         /* eslint-enable style/max-statements-per-line */
     }
   }
