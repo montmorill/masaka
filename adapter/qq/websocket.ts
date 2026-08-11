@@ -1,6 +1,5 @@
 import type QQBot from './bot'
 import type * as QQ from './common'
-import assert from 'node:assert'
 import { EventEmitter } from 'node:events'
 import { logger } from '@yarkjs/logger'
 
@@ -105,11 +104,11 @@ export default class QQBotWS extends EventEmitter<QQ.DispatchEventMap & {
 
     return Object.assign(ws, await new Promise((resolve) => {
       ws.once('READY', (payload) => {
-        assert(payload.version === 1)
-        ;(payload as unknown as { sessionId: string })
-          .sessionId = payload.session_id
+        if (payload.version !== 1)
+          throw new Error('unsupported version', payload.version)
+        const sessionId = payload.session_id
         delete (payload as { session_id?: string }).session_id
-        resolve(payload)
+        resolve({ ...payload, sessionId })
       })
     }))
   }
