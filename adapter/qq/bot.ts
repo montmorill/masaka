@@ -53,7 +53,7 @@ export default class QQBot {
     const res = await resp.json() as
       | { err_code: number, message: string, trace_id: string }
     if ('err_code' in res)
-      throw new Error(`${res.err_code}: ${res.message}`)
+      throw new Error(`${res.err_code}: ${res.message} trace_id: ${res.trace_id}`)
     return res
   }
 
