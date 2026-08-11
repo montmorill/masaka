@@ -2,11 +2,11 @@ export type Pretty<T> = { [K in keyof T]: T[K] } & {}
 
 export type Except<T, K extends keyof T> = Omit<T, K>
 
+export type Overwrite<T, U> = Omit<T, keyof U> & U
+
 export type Merge<T, U> = {
   [K in keyof T]: K extends keyof U ? T[K] & U[K] : T[K]
 } & Omit<U, keyof T>
-
-export type Overwrite<T, U> = Omit<T, keyof U> & U
 
 export type Xor<T, U = T> = T extends any ? T & {
   [K in Exclude<U extends any ? keyof U : never, keyof T>]?: never

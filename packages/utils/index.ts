@@ -4,6 +4,10 @@ export type * from './types'
 
 export const lazy = (inner: any) => () => inner
 
+export function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms))
+}
+
 export function stripNullish<T extends Record<string, any>>(object: T):
 Pretty<Overwrite<T, { [K in keyof T as null extends T[K] ? K : never]?: NonNullable<T[K]> }>> {
   for (const key in Object.keys(object)) {
@@ -11,8 +15,4 @@ Pretty<Overwrite<T, { [K in keyof T as null extends T[K] ? K : never]?: NonNulla
       delete object[key]
   }
   return object as any
-}
-
-export function sleep(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms))
 }
