@@ -127,7 +127,7 @@ export default class QQBotWS extends EventEmitter<QQ.DispatchEventMap & {
       session_id: this.sessionId,
       seq: this.seq!,
     }))
-    await new Promise(resolve => this.once('resumed', resolve))
+    await new Promise(resolve => this.once('RESUMED', resolve))
     this.canReconnect = true
   }
 
