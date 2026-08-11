@@ -7,7 +7,7 @@ import QQBot from './bot'
 import * as QQ from './common'
 import QQBotWS from './websocket'
 
-logger.log = noop
+logger.debug = noop
 
 if (!env.QQ_APP_ID || !env.QQ_APP_SECRET)
   throw new Error('QQ_APP_ID or QQ_APP_SECRET is not provided')
