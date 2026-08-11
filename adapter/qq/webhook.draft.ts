@@ -1,12 +1,14 @@
 import type * as QQ from './common'
 import { Buffer } from 'node:buffer'
-import { EventEmitter } from 'node:events'
+import { webcrypto } from 'node:crypto'
+import EventEmitter from 'node:events'
 import { Server } from 'node:http'
 import { env } from 'node:process'
 import { buffer } from 'node:stream/consumers'
 import { logger } from '@yarkjs/logger'
-import nacl from 'tweetnacl'
 import QQBot from './bot'
+
+const ED25519_PKCS8_HEADER = Buffer.from('302e020100300506032b657004220420', 'hex')
 
 class QQBotServer extends Server {
   emitter: EventEmitter<QQ.DispatchEventMap> = new EventEmitter()
@@ -28,26 +30,31 @@ class QQBotServer extends Server {
           res.statusCode = 200
           res.end(JSON.stringify({ plain_token, signature }))
         }
-        else {
+        else if (payload.op === 0) {
           res.statusCode = 204
           res.end()
           this.emitter.emit(payload.t, payload.d)
         }
       }
       catch (err) {
-        res.writeHead(400)
-        res.end(JSON.stringify({ error: 'Bad Request' }))
-        logger.error(err)
+        res.writeHead(400, 'Bad Request')
+        if (err instanceof Error)
+          res.end(JSON.stringify({ message: err.message }))
+        else res.end('null')
       }
     })
   }
 
   async sign(message: string): Promise<string> {
-    let seed = Buffer.from(this.bot.appSecret, 'utf-8')
-    while (seed.length < 32)
-      seed = Buffer.concat([seed, seed])
-    const { secretKey } = nacl.sign.keyPair.fromSeed(seed.subarray(0, 32))
-    const signature = nacl.sign.detached(Buffer.from(message, 'utf-8'), secretKey)
+    let seedBuffer = Buffer.from(this.bot.appSecret, 'utf-8')
+    while (seedBuffer.length < 32)
+      seedBuffer = Buffer.concat([seedBuffer, seedBuffer])
+    seedBuffer = seedBuffer.subarray(0, 32)
+    const pkcs8Der = Buffer.concat([ED25519_PKCS8_HEADER, seedBuffer])
+    const privateKey = await webcrypto.subtle
+      .importKey('pkcs8', pkcs8Der, { name: 'Ed25519' }, false, ['sign'])
+    const signature = await webcrypto.subtle
+      .sign({ name: 'Ed25519' }, privateKey, Buffer.from(message, 'utf-8'))
     return Buffer.from(signature).toString('hex')
   }
 }
@@ -59,5 +66,6 @@ if (!env.QQ_APP_ID || !env.QQ_APP_SECRET) {
 // eslint-disable-next-line antfu/no-top-level-await
 const bot = await QQBot.create(env.QQ_APP_ID, env.QQ_APP_SECRET)
 logger.info('bot connected', bot.appId)
+
 const server = new QQBotServer(bot)
-server.listen(8080, () => logger.info('server started', bot.appId))
+server.listen(8081, () => logger.info('HTTP server running on port 8081'))
