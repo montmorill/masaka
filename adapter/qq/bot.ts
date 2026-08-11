@@ -60,7 +60,6 @@ export default class QQBot {
   }
 
   async gateway(): Promise<{ url: string }> {
-    setTimeout(() => this.gateway())
     try {
       return await this.fetch('/gateway')
     }
