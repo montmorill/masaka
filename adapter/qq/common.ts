@@ -48,8 +48,17 @@ export enum Intents {
   DIRECT_MESSAGE = 1 << 12,
 
   /**
+   * 群管理相关事件
+   * - GROUP_MEMBER_ADD         : 群成员加入
+   * - GROUP_MEMBER_REMOVE      : 群成员退出
+   * - GROUP_JOIN_REQUEST       : 用户申请加群请求
+   * @todo
+   */
+  GROUP_MANAGEMENT = 1 << 24,
+
+  /**
    * 群聊与 C2C（单聊）事件
-   * - C2C_MESSAGE_CREATE      ：用户单聊发消息给机器人
+   * - C2C_MESSAGE_CREATE       ：用户单聊发消息给机器人
    * - FRIEND_ADD               ：用户添加机器人为好友
    * - FRIEND_DEL               ：用户删除机器人好友
    * - C2C_MSG_REJECT           ：用户在机器人资料卡手动关闭「主动消息」推送
@@ -113,6 +122,7 @@ export namespace Intents {
     | Intents.GUILD_MESSAGES
     | Intents.GUILD_MESSAGE_REACTIONS
     | Intents.DIRECT_MESSAGE
+    | Intents.GROUP_MANAGEMENT
     | Intents.GROUP_AND_C2C_EVENT
     | Intents.INTERACTION
     | Intents.MESSAGE_AUDIT
@@ -306,6 +316,9 @@ export interface DispatchEvents {
   MESSAGE_REACTION_REMOVE: unknown
   DIRECT_MESSAGE_CREATE: unknown
   DIRECT_MESSAGE_DELETE: unknown
+  GROUP_MEMBER_ADD: unknown
+  GROUP_MEMBER_REMOVE: unknown
+  GROUP_JOIN_REQUEST: unknown
   C2C_MESSAGE_CREATE: unknown
   FRIEND_ADD: unknown
   FRIEND_DEL: unknown
