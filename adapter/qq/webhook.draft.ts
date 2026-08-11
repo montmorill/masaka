@@ -9,11 +9,26 @@ import { logger } from '@yarkjs/logger'
 import QQBot from './bot'
 
 const ED25519_PKCS8_HEADER = Buffer.from('302e020100300506032b657004220420', 'hex')
+async function importKey(seedBuffer: Buffer): Promise<webcrypto.CryptoKey> {
+  while (seedBuffer.length < 32)
+    seedBuffer = Buffer.concat([seedBuffer, seedBuffer])
+  seedBuffer = seedBuffer.subarray(0, 32)
+  const pkcs8Der = Buffer.concat([ED25519_PKCS8_HEADER, seedBuffer])
+  return await webcrypto.subtle
+    .importKey('pkcs8', pkcs8Der, { name: 'Ed25519' }, false, ['sign'])
+}
 
 class QQBotServer extends Server {
   emitter: EventEmitter<QQ.DispatchEventMap> = new EventEmitter()
 
-  constructor(public bot: QQBot) {
+  static async create(bot: QQBot): Promise<QQBotServer> {
+    return new QQBotServer(bot, await importKey(Buffer.from(bot.appSecret)))
+  }
+
+  private constructor(
+    public bot: QQBot,
+    public privateKey: webcrypto.CryptoKey,
+  ) {
     super(async (req, res) => {
       res.setHeader('Content-Type', 'application/json')
       try {
@@ -26,7 +41,7 @@ class QQBotServer extends Server {
           if (req.headers['x-signature-method'] !== 'Ed25519')
             throw new Error('Invalid signature method')
           const { plain_token, event_ts } = payload.d
-          const signature = await this.sign(event_ts + plain_token)
+          const signature = await this.sign(Buffer.from(event_ts + plain_token))
           res.statusCode = 200
           res.end(JSON.stringify({ plain_token, signature }))
         }
@@ -45,16 +60,9 @@ class QQBotServer extends Server {
     })
   }
 
-  async sign(message: string): Promise<string> {
-    let seedBuffer = Buffer.from(this.bot.appSecret, 'utf-8')
-    while (seedBuffer.length < 32)
-      seedBuffer = Buffer.concat([seedBuffer, seedBuffer])
-    seedBuffer = seedBuffer.subarray(0, 32)
-    const pkcs8Der = Buffer.concat([ED25519_PKCS8_HEADER, seedBuffer])
-    const privateKey = await webcrypto.subtle
-      .importKey('pkcs8', pkcs8Der, { name: 'Ed25519' }, false, ['sign'])
+  async sign(message: Buffer<ArrayBuffer>): Promise<string> {
     const signature = await webcrypto.subtle
-      .sign({ name: 'Ed25519' }, privateKey, Buffer.from(message, 'utf-8'))
+      .sign({ name: 'Ed25519' }, this.privateKey, message)
     return Buffer.from(signature).toString('hex')
   }
 }
@@ -67,5 +75,6 @@ if (!env.QQ_APP_ID || !env.QQ_APP_SECRET) {
 const bot = await QQBot.create(env.QQ_APP_ID, env.QQ_APP_SECRET)
 logger.info('bot connected', bot.appId)
 
-const server = new QQBotServer(bot)
+// eslint-disable-next-line antfu/no-top-level-await
+const server = await QQBotServer.create(bot)
 server.listen(8081, () => logger.info('HTTP server running on port 8081'))
