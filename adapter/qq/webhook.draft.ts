@@ -37,36 +37,31 @@ class QQBotServer extends Server {
     public keyPair: webcrypto.CryptoKeyPair,
   ) {
     super(async (req, res) => {
-      res.setHeader('Content-Type', 'application/json')
       try {
         const body = await buffer(req)
         if (!await this.verify(req.headers, body)) {
-          res.writeHead(401, 'Unauthorized')
-          res.end(JSON.stringify({ message: 'Invalid signature' }))
+          res.statusCode = 401
+          res.end()
           return
         }
         const payload = JSON.parse(body.toString('utf-8'))
         if (payload.op === 13) {
-          if (req.headers['user-agent'] !== 'QQBot-Callback')
-            throw new Error('Invalid User-Agent')
-          if (req.headers['x-signature-method'] !== 'Ed25519')
-            throw new Error('Invalid signature method')
           const { plain_token, event_ts } = payload.d
           const signature = await this.sign(Buffer.from(event_ts + plain_token))
           res.statusCode = 200
+          res.setHeader('Content-Type', 'application/json')
           res.end(JSON.stringify({ plain_token, signature }))
         }
         else if (payload.op === 0) {
           res.statusCode = 204
-          res.end()
           this.emitter.emit(payload.t, payload.d)
+          res.end()
         }
       }
       catch (err) {
-        res.writeHead(400, 'Bad Request')
-        if (err instanceof Error)
-          res.end(JSON.stringify({ message: err.message }))
-        else res.end('null')
+        res.statusCode = 400
+        res.end()
+        logger.error(err)
       }
     })
   }
@@ -78,10 +73,14 @@ class QQBotServer extends Server {
   }
 
   async verify(headers: IncomingHttpHeaders, body: Buffer): Promise<boolean> {
-    const signature = headers['x-signature-ed25519'] as string
-    const timestamp = headers['x-signature-timestamp'] as string
-    if (!signature || !timestamp)
+    const signature = headers['x-signature-ed25519']
+    const timestamp = headers['x-signature-timestamp']
+    if (headers['user-agent'] !== 'QQBot-Callback'
+      || headers['x-signature-method'] !== 'Ed25519'
+      || typeof signature !== 'string'
+      || typeof timestamp !== 'string') {
       return false
+    }
     const sig = Buffer.from(signature, 'hex')
     if (sig.length !== 64)
       return false
