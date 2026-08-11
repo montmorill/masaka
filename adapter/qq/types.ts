@@ -120,22 +120,6 @@ export type AccessToken = `QQBot ${string}`
 export type MessageId = `ROBOT1.0_${string}`
 export type RefIdx = `REFIDX_${string}`
 
-export interface MessageScene {
-  ext: [
-    `msg_idx=${RefIdx}`,
-    `auth_token=${string}`,
-  ]
-  source: 'default'
-}
-
-export enum MessageType {
-  Text = 0,
-  Ark = 3,
-  Parallel = 101,
-  Forward = 102,
-  Quote = 103,
-}
-
 export interface User {
   id: string
   username: string
@@ -151,6 +135,22 @@ export interface GroupMember {
   union_user_account?: string
   member_openid?: string
   member_role: 'owner' | 'admin' | 'member'
+}
+
+export enum MessageType {
+  Text = 0,
+  Ark = 3,
+  Parallel = 101,
+  Forward = 102,
+  Quote = 103,
+}
+export interface MessageScene<Quote extends boolean> {
+  ext: [
+    ...Quote extends true ? [`ref_msg_idx=${RefIdx}`] : [],
+    `msg_idx=${RefIdx}`,
+    `auth_token=${string}`,
+  ]
+  source: 'default'
 }
 
 export interface MessageAttachmentContentTypes {
@@ -277,7 +277,7 @@ export interface GroupMessage<T extends MessageType = MessageType> {
   /** 群 OpenID */ group_openid: string
   /** 消息发送时间，RFC3339 格式 */ timestamp: string
   /** 消息内容类型（同 C2C_MESSAGE_CREATE） */ message_type: T
-  /** 消息场景上下文 */ message_scene: MessageScene
+  /** 消息场景上下文 */ message_scene: MessageScene<T extends MessageType.Quote ? true : false>
   /** 消息附件 */ attachments?: MessageAttachment[]
   /** 消息中@的用户列表（不含@机器人自身） */ mentions?: GroupMember[]
   /** 结构化卡片消息数据 */ ark_data: T extends MessageType.Ark ? ArkData : never
