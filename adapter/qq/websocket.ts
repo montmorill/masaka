@@ -13,21 +13,21 @@ export default class QQBotWS extends EventEmitter<QQ.DispatchEventMap & {
   }]
   RESUMED: [data: '']
 }> {
-  private constructor(
+  protected constructor(
     public bot: QQBot,
     public intents: QQ.Intents,
     public inner: WebSocket,
   ) { super() }
-
-  private seq: number | null = null
-  private heartbeatTimeout?: NodeJS.Timeout
 
   readonly version!: 1
   readonly sessionId!: string
   readonly user!: QQ.User
   readonly shard!: QQ.Shard
 
-  private setup(hello: () => void): void {
+  protected seq: number | null = null
+  protected heartbeatTimeout?: NodeJS.Timeout
+
+  protected setup(hello: () => void): void {
     this.inner.onmessage = event => this.onmessage(event)
     this.inner.onclose = () => this.reconnect()
     this.once('HELLO', (interval) => {

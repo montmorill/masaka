@@ -27,11 +27,7 @@ async function deriveKeyPair(seedBuffer: Buffer): Promise<webcrypto.CryptoKeyPai
 export class QQBotServer extends Server {
   emitter: EventEmitter<QQ.DispatchEventMap> = new EventEmitter()
 
-  static async create(bot: QQBot): Promise<QQBotServer> {
-    return new QQBotServer(bot, await deriveKeyPair(Buffer.from(bot.appSecret)))
-  }
-
-  private constructor(
+  protected constructor(
     public bot: QQBot,
     public keyPair: webcrypto.CryptoKeyPair,
   ) {
@@ -68,6 +64,10 @@ export class QQBotServer extends Server {
         logger.error(err)
       }
     })
+  }
+
+  static async create(bot: QQBot): Promise<QQBotServer> {
+    return new QQBotServer(bot, await deriveKeyPair(Buffer.from(bot.appSecret)))
   }
 
   async sign(message: Buffer<ArrayBuffer>): Promise<string> {

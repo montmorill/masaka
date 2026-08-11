@@ -4,7 +4,7 @@ import { logger } from '@yarkjs/logger'
 const GATEWAY_URL = 'wss://api.sgroup.qq.com/websocket'
 
 export default class QQBot {
-  private constructor(
+  protected constructor(
     public appId: string,
     public appSecret: string,
     public baseUrl: string,
@@ -22,7 +22,7 @@ export default class QQBot {
     return bot
   }
 
-  private async refreshAccessToken(): Promise<void> {
+  protected async refreshAccessToken(): Promise<void> {
     const res = await this.fetch<
       | { access_token: string, expires_in: `${number}` }
       | { code: number, message: string }
