@@ -5,7 +5,7 @@ const GATEWAY_URL = 'wss://api.sgroup.qq.com/websocket'
 export default class QQBot {
   private constructor(
     public appId: string,
-    public secret: string,
+    public appSecret: string,
     public baseUrl: string,
   ) {}
 
@@ -13,10 +13,10 @@ export default class QQBot {
 
   static async create(
     appId: string,
-    secret: string,
+    appSecret: string,
     baseUrl = 'https://api.bot.qq.com',
   ): Promise<QQBot> {
-    const bot = new QQBot(appId, secret, baseUrl)
+    const bot = new QQBot(appId, appSecret, baseUrl)
     await bot.refreshAccessToken()
     return bot
   }
@@ -30,7 +30,7 @@ export default class QQBot {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         appId: this.appId,
-        clientSecret: this.secret,
+        clientSecret: this.appSecret,
       }),
     })
     if ('message' in res)
