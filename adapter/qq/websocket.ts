@@ -80,7 +80,7 @@ export default class QQBotWS extends EventEmitter<QQ.DispatchEventMap & {
     const payload: QQ.Payload = JSON.parse(event.data)
     if (payload.s)
       this.seq = payload.s
-    payload.d !== undefined && logger.log(
+    payload.d !== undefined && logger.debug(
       'recv',
       QQ.OpCode.toString(payload.op),
       ...payload.op === QQ.OpCode.Dispatch ? [payload.t] : [],
@@ -105,7 +105,7 @@ export default class QQBotWS extends EventEmitter<QQ.DispatchEventMap & {
     if (d === undefined)
       return this.inner.send(JSON.stringify({ op }))
     if (op !== QQ.OpCode.Heartbeat)
-      logger.log('send', QQ.OpCode.toString(op), d)
+      logger.debug('send', QQ.OpCode.toString(op), d)
     this.inner.send(JSON.stringify({ op, d }))
   }
 }
