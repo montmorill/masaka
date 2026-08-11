@@ -136,21 +136,23 @@ export type AccessToken = `QQBot ${string}`
 export type MessageId = `ROBOT1.0_${string}`
 export type RefIdx = `REFIDX_${string}`
 
-export interface User {
+export interface Login {
   id: string
   username: string
   bot: true
   status: 1 | unknown
 }
 
-export interface GroupMember {
-  id: string
-  username: string
-  bot: boolean
-  union_openid: '' | string
-  union_user_account?: string
-  member_openid?: string
-  member_role: 'owner' | 'admin' | 'member'
+export interface User {
+  /** 用户唯一标识（OpenID 格式） */ id: string
+  /** 用户昵称 */ username: '' | string
+  /** 是否为机器人 */ bot: boolean
+  /** 跨应用统一用户 OpenID（可能为空） */ union_openid: '' | string
+  /** 跨应用统一用户账号（可能为空） */ union_user_account?: string
+}
+
+export interface Member extends User {
+  /** 群内角色 */ member_role: 'owner' | 'admin' | 'member'
 }
 
 export enum MessageType {
@@ -160,11 +162,11 @@ export enum MessageType {
   Forward = 102,
   Quote = 103,
 }
-export interface MessageScene<Quote extends boolean> {
+export interface MessageScene {
   ext: [
-    ...Quote extends true ? [`ref_msg_idx=${RefIdx}`] : [],
+    ...[`ref_msg_idx=${RefIdx}`] | [],
     `msg_idx=${RefIdx}`,
-    `auth_token=${string}`,
+    ...[`auth_token=${string}`] | [],
   ]
   source: 'default'
 }
@@ -285,19 +287,23 @@ export interface MsgElement<T extends MessageType = MessageType> {
   /** 嵌套消息元素列表 */ msg_elements?: MsgElement[]
 }
 
-export interface GroupMessage<T extends MessageType = MessageType> {
+export interface Message<T extends MessageType = MessageType> {
   /** @ 消息 ID，可用于被动回复和撤回 */ id: MessageId
-  /** 发送者 */ author: GroupMember
+  /** 发送者 */ author: User
   /** 消息文本内容（已去除@机器人的前缀） */ content: string
   /** @deprecated */ group_id: string
   /** 群 OpenID */ group_openid: string
   /** 消息发送时间，RFC3339 格式 */ timestamp: string
   /** 消息内容类型（同 C2C_MESSAGE_CREATE） */ message_type: T
-  /** 消息场景上下文 */ message_scene: MessageScene<T extends MessageType.Quote ? true : false>
+  /** 消息场景上下文 */ message_scene: MessageScene
   /** 消息附件 */ attachments?: MessageAttachment[]
-  /** 消息中@的用户列表（不含@机器人自身） */ mentions?: GroupMember[]
   /** 结构化卡片消息数据 */ ark_data: T extends MessageType.Ark ? ArkData : never
   /** 消息元素列表 */ msg_elements: MsgElement[]
+}
+
+export interface GroupMessage<T extends MessageType = MessageType> extends Message<T> {
+  /** 发送者 */ author: Member
+  /** 消息中@的用户列表（不含@机器人自身） */ mentions?: Member[]
 }
 
 export interface DispatchEvents {
@@ -319,7 +325,7 @@ export interface DispatchEvents {
   GROUP_MEMBER_ADD: unknown
   GROUP_MEMBER_REMOVE: unknown
   GROUP_JOIN_REQUEST: unknown
-  C2C_MESSAGE_CREATE: unknown
+  /** 单聊消息 */ C2C_MESSAGE_CREATE: Message
   FRIEND_ADD: unknown
   FRIEND_DEL: unknown
   C2C_MSG_REJECT: unknown

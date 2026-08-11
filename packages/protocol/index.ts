@@ -19,12 +19,13 @@ export interface User {
 
 export interface Member extends User {
   channel: Channel
+  role?: 'owner' | 'admin' | 'member'
 }
 
 export interface Channel {
   id: string
   name?: string
-  guild: Guild
+  guild?: Guild
 }
 
 export interface Guild {
@@ -42,5 +43,5 @@ export interface SessionTypes {
 export type Session = SessionTypes[keyof SessionTypes]
 
 export interface EventMap {
-  message: [session: Member, message: Element<'message'>]
+  message: [sender: User | Member, message: Element<'message'>]
 }
