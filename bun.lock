@@ -32,6 +32,13 @@
       "name": "@yarkjs/logger",
       "version": "0.0.0",
     },
+    "packages/protocol": {
+      "name": "@yarkjs/protocol",
+      "version": "0.0.0",
+      "dependencies": {
+        "@yarkjs/element": "workspace:^",
+      },
+    },
     "packages/utils": {
       "name": "@yarkjs/utils",
       "version": "0.0.0",
@@ -161,6 +168,8 @@
     "@yarkjs/element": ["@yarkjs/element@workspace:packages/element"],
 
     "@yarkjs/logger": ["@yarkjs/logger@workspace:packages/logger"],
+
+    "@yarkjs/protocol": ["@yarkjs/protocol@workspace:packages/protocol"],
 
     "@yarkjs/utils": ["@yarkjs/utils@workspace:packages/utils"],
 
