@@ -238,8 +238,8 @@ export interface KnownArkDataTypes {
     desc: string
     songId: string
     cover: `http://img.tencentmusic.com/${string}`
-    inviteType: 'listen' | unknown
     type: 'music_invite' | unknown
+    inviteType: 'listen' | unknown
     button: '加入一起听歌' | string
     /** @type `[开启了一起听歌] ${this['desc']}` */
     prompt: `[开启了一起听歌] ${string}`
