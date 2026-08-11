@@ -40,17 +40,18 @@ export class QQBotServer extends Server {
         const body = await buffer(req)
         if (!await this.verify(req.headers, body)) {
           res.statusCode = 401
-          res.end()
-          return
+          return void res.end()
         }
         const payload: QQ.Payload = JSON.parse(body.toString('utf-8'))
         if (payload.op === QQ.OpCode.Dispatch) {
-          res.statusCode = 204
+          logger.debug('recv', QQ.OpCode.toString(payload.op), payload.t, payload.d)
           this.emitter.emit(payload.t, payload.d, payload.id as any)
+          res.statusCode = 204
           res.setHeader('Content-Type', 'application/json')
           res.end(JSON.stringify({ op: QQ.OpCode.CallbackAck }))
         }
         else if (payload.op === QQ.OpCode.CallbackVerify) {
+          logger.debug('recv', QQ.OpCode.toString(payload.op), payload.d)
           const { plain_token, event_ts } = payload.d
           const signature = await this.sign(Buffer.from(event_ts + plain_token))
           res.statusCode = 200
