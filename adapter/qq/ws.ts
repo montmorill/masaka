@@ -13,25 +13,28 @@ export default class QQBotWS extends EventEmitter<QQ.DispatchEventMap
   ) { super() }
 
   private seq: number | null = null
+  private heartbeatTimeout?: NodeJS.Timeout
 
   readonly version!: 1
   readonly sessionId!: string
   readonly user!: QQ.User
   readonly shard!: QQ.Shard
 
-  private setup(): void {
+  private setup(hello: () => void): void {
     this.inner.onmessage = event => this.onmessage(event)
-    this.inner.onerror = () => this.reconnect()
     this.inner.onclose = () => this.reconnect()
-    this.once('hello', interval =>
-      setInterval(() => this.send(QQ.OpCode.Heartbeat, this.seq), interval))
+    this.once('hello', (interval) => {
+      this.heartbeatTimeout = setInterval(() => {
+        this.send(QQ.OpCode.Heartbeat, this.seq)
+      }, interval)
+      hello()
+    })
   }
 
   static async create(bot: QQBot, intents: QQ.Intents): Promise<QQBotWS> {
     const gateway = await bot.gateway()
     const ws = new QQBotWS(bot, intents, new WebSocket(gateway.url))
-    ws.setup()
-    ws.once('hello', () => ws.send(QQ.OpCode.Identify, {
+    ws.setup(() => ws.send(QQ.OpCode.Identify, {
       token: `QQBot ${bot.accessToken}`,
       intents,
       shard: [0, 1],
@@ -49,11 +52,12 @@ export default class QQBotWS extends EventEmitter<QQ.DispatchEventMap
   }
 
   async reconnect(): Promise<void> {
+    this.inner.onclose = null
     this.inner.close()
+    clearTimeout(this.heartbeatTimeout)
     const gateway = await this.bot.gateway()
     this.inner = new WebSocket(gateway.url)
-    this.setup()
-    this.once('hello', () => this.send(QQ.OpCode.Resume, {
+    this.setup(() => this.send(QQ.OpCode.Resume, {
       token: `QQBot ${this.bot.accessToken}`,
       session_id: this.sessionId,
       seq: this.seq!,

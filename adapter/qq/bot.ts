@@ -1,3 +1,7 @@
+import { logger } from '@yarkjs/logger'
+
+const GATEWAY_URL = 'wss://api.sgroup.qq.com/websocket'
+
 export default class QQBot {
   private constructor(
     public appId: string,
@@ -53,7 +57,15 @@ export default class QQBot {
     return res
   }
 
-  async gateway(): Promise<{ url: string }> { return await this.fetch('/gateway') }
+  async gateway(): Promise<{ url: string }> {
+    try {
+      return await this.fetch('/gateway')
+    }
+    catch (error) {
+      logger.warn(error, 'fallback to', GATEWAY_URL)
+      return { url: GATEWAY_URL }
+    }
+  }
 
   async gatewayBot(): Promise<{
     url: string
