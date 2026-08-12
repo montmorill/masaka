@@ -97,8 +97,15 @@ export class QQAdapter extends EventEmitter<Universal.EventMap> {
       const { prompt, ark_type: type, ark_name: name, fields } = message.ark_data
       content = h.ark({ prompt, type, name, ...fields }, message.content)
     }
-    // TODO: forward
+    else if (message.message_type === QQ.MessageType.Parallel) {
+      console.warn('unknown message type', message)
+    }
+    else if (message.message_type === QQ.MessageType.Forward) {
+      // TODO: forward
+    }
+    else if (message.message_type === QQ.MessageType.Quote) {
     // TODO: quote
+    }
     else if (message.mentions) {
       const mentionMap = new Map<string, Element<'mention'>>()
       for (const mention of message.mentions) {
@@ -106,8 +113,9 @@ export class QQAdapter extends EventEmitter<Universal.EventMap> {
           mentionMap.set('all', h.mention({ everyone: true }))
           continue
         }
-        // TODO: record user
+        logger.assert(mention.scope === 'single', 'unknown mention.scope', mention.scope)
         mentionMap.set(mention.id, h.mention({ user: mention.id }))
+        // TODO: record user
       }
       content = h.pack(Array.from(h.replace(
         message.content,
