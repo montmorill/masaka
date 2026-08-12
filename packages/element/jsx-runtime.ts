@@ -123,11 +123,11 @@ export default new Proxy(h, {
 
 export function jsx<T extends keyof JSXElements>(
   type: ElementType<T>,
-  props: ElementAttrs<T> & { children?: Fragment | Fragment[] },
+  { children, ...props }: JSXElementsWithChildren[T],
 ): Element<T> {
-  if (Array.isArray(props.children))
-    return h(type, props, ...props.children)
-  if (props.children)
-    return h(type, props, props.children)
+  if (Array.isArray(children))
+    return h(type, props, ...children)
+  if (children)
+    return h(type, props, children)
   return h(type, props)
 }
