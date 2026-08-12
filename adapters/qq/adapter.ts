@@ -25,8 +25,8 @@ declare module '@yarkjs/protocol' {
   }
 
   interface Message {
-    'qq:type': QQ.MessageType.StringTag
-    'qq:msg_idx': QQ.RefIdx
+    'qq:type'?: QQ.MessageType.StringTag
+    'qq:msg_idx'?: QQ.RefIdx
   }
 }
 
@@ -84,6 +84,14 @@ export class QQAdapter extends EventEmitter<Universal.EventMap> {
     }))
   }
 
+  decodeArkData({ prompt, ark_type: type, ark_name: name, fields }: QQ.ArkData): Element<'ark'> {
+    return h.ark({ prompt, type, name, ...fields })
+  }
+
+  parseForwardContent(content: string): Element<'message'> {
+    return h.message(content) // TODO: parse forward content
+  }
+
   replaceMentions(content: string, mentions: NonNullable<QQ.GroupMessage['mentions']>): Fragment {
     const mentionMap = new Map<string, Element<'mention'>>()
     for (const mention of mentions) {
@@ -102,38 +110,38 @@ export class QQAdapter extends EventEmitter<Universal.EventMap> {
     )))
   }
 
-  decodeMessageContent(message: Omit<QQ.Message & Partial<QQ.GroupMessage>, 'author'>): Element<'message'> {
-    const scene = this.decodeMessageScene(message.message_scene)
+  decodeMsgElements(msg_elements: QQ.MsgElement[]): Element<'message'> {
+    return h.message(JSON.stringify(msg_elements)) // TODO: parse message elements
+  }
+
+  decodeMessageContent({
+    message_scene,
+    message_type,
+    ...message
+  }: Omit<QQ.Message & Partial<QQ.GroupMessage>, 'author'>): Element<'message'> {
+    const scene = this.decodeMessageScene(message_scene)
     const element = h.message(Object.assign({
       'id': message.id,
       'timestamp': new Date(message.timestamp).valueOf(),
-      'qq:type': QQ.MessageType.toString(message.message_type),
+      'qq:type': QQ.MessageType.toString(message_type),
       ...withPrefix('qq:', scene),
     }))
     let content: Fragment = message.content
-    if (message.message_type === QQ.MessageType.Ark) {
-      const { prompt, ark_type: type, ark_name: name, fields } = message.ark_data
-      content = h.ark({ prompt, type, name, ...fields }, message.content)
-    }
-    else if (message.message_type === QQ.MessageType.Parallel) {
-      console.warn('unknown message type', message)
+    if (message_type === QQ.MessageType.Ark)
+      content = this.decodeArkData(message.ark_data).update(message.content)
+    else if (message_type === QQ.MessageType.Parallel)
+      console.warn('unknown message type', Object.assign(message, { message_scene, message_type }))
       // TODO: parallel
-    }
-    else if (message.message_type === QQ.MessageType.Forward) {
-      // TODO: forward
-    }
-    else if (message.message_type !== QQ.MessageType.Text
-      && message.message_type !== QQ.MessageType.Quote) {
-      console.warn('unknown message type', message)
-    }
-    if (message.mentions) {
+    else if (message_type === QQ.MessageType.Forward)
+      content = this.parseForwardContent(message.content)
+    else if (message_type !== QQ.MessageType.Text && message_type !== QQ.MessageType.Quote)
+      console.warn('unknown message type', Object.assign(message, { message_scene, message_type }))
+    if (message.mentions)
       content = this.replaceMentions(message.content, message.mentions)
-    }
-    if (message.message_type === QQ.MessageType.Quote) {
-      // TODO: quote
-    }
     // TODO: attachments
     element.children = h.unpack(content)
+    if (message_type === QQ.MessageType.Quote)
+      element.children.unshift(this.decodeMsgElements(message.msg_elements))
     return element
   }
 

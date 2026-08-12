@@ -22,8 +22,8 @@ declare module '@yarkjs/element' {
 }
 
 export interface Message {
-  id: string
-  timestamp: number
+  id?: string
+  timestamp?: number
 }
 
 export interface User {
