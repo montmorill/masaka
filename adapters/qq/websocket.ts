@@ -29,7 +29,10 @@ export default class QQBotWS extends EventEmitter<QQ.DispatchEventMap & {
 
   protected setup(hello: () => void): void {
     this.inner.onmessage = event => this.onmessage(event)
-    this.inner.onclose = () => this.reconnect()
+    this.inner.onclose = () => {
+      logger.log('connection closed')
+      this.reconnect()
+    }
     this.once('HELLO', (interval) => {
       this.heartbeatTimeout = setInterval(() => {
         this.send(QQ.OpCode.Heartbeat, this.seq)
@@ -65,7 +68,7 @@ export default class QQBotWS extends EventEmitter<QQ.DispatchEventMap & {
     this.canReconnect = false
     this.inner.close()
     clearTimeout(this.heartbeatTimeout)
-    logger.log('reconnecting')
+    logger.log('reconnecting...')
     const gateway = await this.bot.gateway()
     this.inner = new WebSocket(gateway.url)
     this.setup(() => this.send(QQ.OpCode.Resume, {
@@ -92,6 +95,7 @@ export default class QQBotWS extends EventEmitter<QQ.DispatchEventMap & {
       /* eslint-disable style/max-statements-per-line */
       case QQ.OpCode.Dispatch: this.emit(payload.t, payload.d, payload.id as any); break
       case QQ.OpCode.Heartbeat: this.send(QQ.OpCode.HeartbeatAck); break
+      case QQ.OpCode.Reconnect: logger.log('server request reconnect'); this.reconnect(); break
       case QQ.OpCode.InvalidSession: this.canReconnect = false; throw new Error('invalid session')
       case QQ.OpCode.Hello: this.emit('HELLO', payload.d.heartbeat_interval); break
       case QQ.OpCode.HeartbeatAck: break
