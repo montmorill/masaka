@@ -8,6 +8,7 @@
         "@yarkjs/adapter-qq": "workspace:^",
         "@yarkjs/element": "workspace:^",
         "@yarkjs/logger": "workspace:^",
+        "@yarkjs/markdown": "workspace:^",
         "@yarkjs/protocol": "workspace:^",
         "@yarkjs/utils": "workspace:^",
       },
@@ -22,6 +23,7 @@
       "name": "@yarkjs/adapter-qq",
       "version": "0.0.0",
       "dependencies": {
+        "@yarkjs/element": "workspace:^",
         "@yarkjs/protocol": "workspace:^",
       },
     },
@@ -31,15 +33,22 @@
       "dependencies": {
         "@babel/code-frame": "^8.0.0",
         "@yarkjs/utils": "workspace:^",
-        "commonmark": "^0.31.2",
-      },
-      "devDependencies": {
-        "@types/commonmark": "^0.27.10",
       },
     },
     "packages/logger": {
       "name": "@yarkjs/logger",
       "version": "0.0.0",
+    },
+    "packages/markdown": {
+      "name": "@yarkjs/markdown",
+      "version": "0.0.0",
+      "dependencies": {
+        "@yarkjs/utils": "workspace:^",
+        "commonmark": "^0.31.2",
+      },
+      "devDependencies": {
+        "@types/commonmark": "^0.27.10",
+      },
     },
     "packages/protocol": {
       "name": "@yarkjs/protocol",
@@ -179,6 +188,8 @@
     "@yarkjs/element": ["@yarkjs/element@workspace:packages/element"],
 
     "@yarkjs/logger": ["@yarkjs/logger@workspace:packages/logger"],
+
+    "@yarkjs/markdown": ["@yarkjs/markdown@workspace:packages/markdown"],
 
     "@yarkjs/protocol": ["@yarkjs/protocol@workspace:packages/protocol"],
 

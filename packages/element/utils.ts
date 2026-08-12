@@ -2,8 +2,6 @@ import type { Fragment, JSXElements } from './jsx-runtime'
 import { lazy } from '@yarkjs/utils'
 import h, { Element } from './jsx-runtime'
 
-export { markdown } from './markdown'
-
 export function toElement(fragment: Fragment): Element {
   return fragment instanceof Element ? fragment : h.template(fragment)
 }

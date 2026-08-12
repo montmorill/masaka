@@ -1,10 +1,9 @@
+import type { Element, Fragment } from '@yarkjs/element'
 import type { Except } from '@yarkjs/utils'
 import type { Node, NodeType } from 'commonmark'
-import type { Element, Fragment } from './jsx-runtime'
+import h from '@yarkjs/element'
 import { stripNullish } from '@yarkjs/utils'
 import { Parser } from 'commonmark'
-import h from './jsx-runtime'
-import { pack, replace, toElement, transform } from './utils'
 
 const PUA_START = 0xE000
 const PUA_SIZE = 6400
@@ -24,8 +23,8 @@ export function markdown(strings: TemplateStringsArray, ...values: Fragment[]): 
   }, '')
   const ast = new Parser().parse(markdownText)
   const fragment = transformNode(ast)
-  return toElement(pack(transform(fragment, {
-    text: text => Array.from(replace(text, PUA_PATTERN, (match) => {
+  return h.toElement(h.pack(h.transform(fragment, {
+    text: text => Array.from(h.replace(text, PUA_PATTERN, (match) => {
       const codepoint = match.codePointAt(0)
       return values[codepoint! - PUA_START]!
     })),

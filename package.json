@@ -15,6 +15,7 @@
     "@yarkjs/adapter-qq": "workspace:^",
     "@yarkjs/element": "workspace:^",
     "@yarkjs/logger": "workspace:^",
+    "@yarkjs/markdown": "workspace:^",
     "@yarkjs/protocol": "workspace:^",
     "@yarkjs/utils": "workspace:^"
   },

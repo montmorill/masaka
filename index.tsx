@@ -2,6 +2,7 @@
 
 import util, { inspect } from 'node:util'
 import h from '@yarkjs/element'
+import { markdown } from '@yarkjs/markdown'
 
 // try uncomment this line!
 // util.inspect.defaultOptions.compact = false
@@ -11,7 +12,7 @@ util.inspect.defaultOptions.depth = Infinity
 const satori = <a href="https://satori.chat">Satori</a>
 const koishi = <a href="https://koishi.chat">Koishi</a>
 
-console.log(inspect(h.markdown`
+console.log(inspect(markdown`
 # Hello, ${<mention everyone />}!
 
 - I'm ${h.code('yark')},
