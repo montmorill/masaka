@@ -65,6 +65,7 @@ export default class QQBotWS extends EventEmitter<QQ.DispatchEventMap & {
     this.canReconnect = false
     this.inner.close()
     clearTimeout(this.heartbeatTimeout)
+    logger.log('reconnecting')
     const gateway = await this.bot.gateway()
     this.inner = new WebSocket(gateway.url)
     this.setup(() => this.send(QQ.OpCode.Resume, {
@@ -73,6 +74,7 @@ export default class QQBotWS extends EventEmitter<QQ.DispatchEventMap & {
       seq: this.seq!,
     }))
     await new Promise(resolve => this.once('RESUMED', resolve))
+    logger.log('resumed')
     this.canReconnect = true
   }
 
