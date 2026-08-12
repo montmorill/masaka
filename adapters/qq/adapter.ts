@@ -62,7 +62,8 @@ export class QQAdapter extends EventEmitter<Universal.EventMap> {
   }
 
   decodeMessageScene(scene: QQ.MessageScene): Record<string, string> {
-    logger.assert(scene.source === 'default')
+    if (scene.source !== 'default')
+      logger.warn('unexpected scene source', scene.source)
     return Object.fromEntries(scene.ext.map((pair) => {
       const index = pair.search('=')
       const key = pair.slice(0, index)
@@ -82,6 +83,10 @@ export class QQAdapter extends EventEmitter<Universal.EventMap> {
 
   decodeUserMessage(message: QQ.Message): Universal.EventMap['message'] {
     const sender = this.decodeUser(message.author)
+    if (sender.name === '')
+      delete sender.name
+    else
+      console.warn('unexpected C2C_MESSAGE_CREATE author.username', sender.name)
     const element = this.decodeMessageContent(message)
     return [sender, element]
   }
