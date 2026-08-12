@@ -39,16 +39,9 @@ export class QQAdapter extends EventEmitter<Universal.EventMap> {
     emitter.on('GROUP_AT_MESSAGE_CREATE', adapt('message', 'decodeGroupMessage'))
   }
 
-  decodeGuild(channel: { group_openid: string }): Universal.Guild {
-    return {
-      id: channel.group_openid,
-    }
-  }
-
   decodeChannel(channel: { group_openid: string }): Universal.Channel {
     return {
       id: channel.group_openid,
-      guild: this.decodeGuild(channel),
     }
   }
 
