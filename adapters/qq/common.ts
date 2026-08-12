@@ -307,8 +307,6 @@ export interface Message<T extends MessageType = MessageType> {
   /** @ 消息 ID，可用于被动回复和撤回 */ id: MessageId
   /** 发送者 */ author: User
   /** 消息文本内容（已去除@机器人的前缀） */ content: string
-  /** @deprecated */ group_id: string
-  /** 群 OpenID */ group_openid: string
   /** 消息发送时间，RFC3339 格式 */ timestamp: string
   /** 消息内容类型（同 C2C_MESSAGE_CREATE） */ message_type: T
   /** 消息场景上下文 */ message_scene: MessageScene
@@ -319,6 +317,8 @@ export interface Message<T extends MessageType = MessageType> {
 
 export interface GroupMessage<T extends MessageType = MessageType> extends Message<T> {
   /** 发送者 */ author: Member
+  /** @deprecated */ group_id: string
+  /** 群 OpenID */ group_openid: string
   /** 消息中@的用户列表（不含@机器人自身） */ mentions?: Member[]
 }
 
