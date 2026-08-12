@@ -23,7 +23,7 @@ export function markdown(strings: TemplateStringsArray, ...values: Fragment[]): 
   }, '')
   const ast = new Parser().parse(markdownText)
   const fragment = transformNode(ast)
-  return h.toElement(h.pack(h.transform(fragment, {
+  return h.wrap(h.pack(h.transform(fragment, {
     text: text => Array.from(h.replace(text, PUA_PATTERN, (match) => {
       const codepoint = match.codePointAt(0)
       return values[codepoint! - PUA_START]!
