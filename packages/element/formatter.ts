@@ -3,7 +3,19 @@ import type { ElementJSON } from './jsx-runtime'
 import util, { inspect } from 'node:util'
 import { Element, Fragment } from './jsx-runtime'
 
-export interface FormatOptions extends InspectOptions {
+export interface FormatOptions extends Pick<
+  InspectOptions,
+  | 'showHidden'
+  | 'depth'
+  | 'colors'
+  // TODO: | 'maxArrayLength'
+  // TODO: | 'maxStringLength'
+  // TODO: | 'breakLength'
+  | 'compact'
+  // TODO: | 'sorted'
+  // TODO: | 'numericSeparator'
+> {
+  wrapText?: boolean
   highlight?: (code: string) => string
 }
 
@@ -107,14 +119,18 @@ export class Formatter {
   node(node: unknown): void {
     if (node instanceof Element)
       this.element(node)
-    else if (typeof node === 'string')
+    else if (!this.opts.wrapText && typeof node === 'string')
       this.multiline(node)
     else this.object(node)
   }
 }
 
 export namespace Formatter {
-  export const defaultOptions = Object.assign({}, inspect.defaultOptions)
+  export const defaultOptions: Required<FormatOptions> = {
+    ...inspect.defaultOptions as Required<InspectOptions>,
+    wrapText: false,
+    highlight: code => code,
+  }
 
   export const styles = {
     string: 'green',
