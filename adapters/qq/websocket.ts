@@ -3,7 +3,7 @@ import { EventEmitter } from 'node:events'
 import { logger } from '@yarkjs/logger'
 import * as QQ from './common'
 
-export default class QQBotWS extends EventEmitter<QQ.DispatchEventMap & {
+export class QQBotWS extends EventEmitter<QQ.DispatchEventMap & {
   HELLO: [interval: number]
   READY: [data: {
     version: 1
