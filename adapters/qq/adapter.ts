@@ -1,4 +1,4 @@
-import type { Element, Fragment } from '@yarkjs/element'
+import type { Element, Fragment, MaybeFragment } from '@yarkjs/element'
 import type * as Universal from '@yarkjs/protocol'
 import type QQBot from './bot'
 import EventEmitter from 'node:events'
@@ -26,7 +26,11 @@ declare module '@yarkjs/protocol' {
 
   interface Message {
     'qq:type'?: QQ.MessageType.StringTag
-    'qq:msg_idx'?: QQ.RefIdx
+    'qq:msg_idx'?: QQ.MsgIdx
+  }
+
+  interface Quote {
+    'qq:msg_idx': QQ.RefMsgIdx
   }
 }
 
@@ -88,8 +92,8 @@ export class QQAdapter extends EventEmitter<Universal.EventMap> {
     return h.ark({ prompt, type, name, ...fields })
   }
 
-  parseForwardContent(content: string): Element<'message'> {
-    return h.message(content) // TODO: parse forward content
+  parseForwardContent(content: string): Element<'message'>[] {
+    return [h.message(content)] // TODO: parse forward content
   }
 
   parseMentions(content: string, mentions: NonNullable<QQ.GroupMessage['mentions']>): Fragment {
@@ -110,8 +114,9 @@ export class QQAdapter extends EventEmitter<Universal.EventMap> {
     )))
   }
 
-  parseMsgElements(msg_elements: QQ.MsgElement[]): Element<'message'> {
-    return h.message(JSON.stringify(msg_elements)) // TODO: parse message elements
+  parseMsgElements(msg_elements: QQ.MsgElement[], ref_msg_idx: QQ.RefMsgIdx): Element<'quote'> {
+    return h.quote({ 'qq:msg_idx': ref_msg_idx }, ...msg_elements as unknown[] as MaybeFragment[])
+    // TODO: parse message elements
   }
 
   parseMessageContent({
@@ -119,7 +124,7 @@ export class QQAdapter extends EventEmitter<Universal.EventMap> {
     message_type,
     ...message
   }: Omit<QQ.Message & Partial<QQ.GroupMessage>, 'author'>): Element<'message'> {
-    const scene = this.parseMessageScene(message_scene)
+    const { ref_msg_idx, ...scene } = this.parseMessageScene(message_scene)
     const element = h.message(Object.assign({
       'id': message.id,
       'timestamp': new Date(message.timestamp).valueOf(),
@@ -132,15 +137,19 @@ export class QQAdapter extends EventEmitter<Universal.EventMap> {
     else if (message_type === QQ.MessageType.Parallel) // TODO: parallel
       console.warn('unknown message type', message_type, message)
     else if (message_type === QQ.MessageType.Forward)
-      content = this.parseForwardContent(message.content)
+      content = h.pack(this.parseForwardContent(message.content))
     else if (message_type !== QQ.MessageType.Text && message_type !== QQ.MessageType.Quote)
       console.warn('unknown message type', message_type, message)
     if (message.mentions)
       content = this.parseMentions(message.content, message.mentions)
     // TODO: attachments
     element.children = h.unpack(content)
-    if (message_type === QQ.MessageType.Quote)
-      element.children.unshift(this.parseMsgElements(message.msg_elements))
+    if (message_type === QQ.MessageType.Quote) {
+      element.children.unshift(this.parseMsgElements(
+        message.msg_elements,
+        ref_msg_idx as QQ.RefMsgIdx,
+      ))
+    }
     return element
   }
 
@@ -151,13 +160,15 @@ export class QQAdapter extends EventEmitter<Universal.EventMap> {
     else
       console.warn('unexpected C2C_MESSAGE_CREATE author.username', sender.name)
     const element = this.parseMessageContent(message)
-    return [sender, element]
+    element.children.unshift(h.author(sender))
+    return [element]
   }
 
   parseGroupMessage(message: QQ.GroupMessage): Universal.EventMap['message'] {
     const channel = this.parseChannel(message)
     const sender = this.parseMember(message.author, channel)
     const element = this.parseMessageContent(message)
-    return [sender, element]
+    element.children.unshift(h.author(sender))
+    return [element]
   }
 }

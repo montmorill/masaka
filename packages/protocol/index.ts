@@ -17,11 +17,17 @@ declare module '@yarkjs/element' {
     video: { src: string, title?: string }
     file: { src: string, title?: string }
     message: Message
-    author: User
+    quote: Quote
+    author: User | Member
   }
 }
 
 export interface Message {
+  id?: string
+  timestamp?: number
+}
+
+export interface Quote {
   id?: string
   timestamp?: number
 }
@@ -57,5 +63,5 @@ export interface SessionTypes {
 export type Session = SessionTypes[keyof SessionTypes]
 
 export interface EventMap {
-  message: [sender: User | Member, message: Element<'message'>]
+  message: [Element<'message'>]
 }

@@ -134,7 +134,8 @@ export namespace Intents {
 export type Shard = [number, number]
 export type AccessToken = `QQBot ${string}`
 export type MessageId = `ROBOT1.0_${string}`
-export type RefIdx = `REFIDX_${string}`
+export type MsgIdx = `REFIDX_${string}`
+export type RefMsgIdx = `TMP_${string}`
 
 export interface Login {
   id: string
@@ -180,8 +181,8 @@ export namespace MessageType {
 
 export interface MessageScene {
   ext: [
-    ...[`ref_msg_idx=${RefIdx}`] | [],
-    `msg_idx=${RefIdx}`,
+    ...[`ref_msg_idx=${RefMsgIdx}`] | [],
+    `msg_idx=${MsgIdx}`,
     ...[`auth_token=${string}`] | [],
   ]
   source: 'default'
@@ -296,12 +297,12 @@ export interface ArkData<T extends string = string> {
 }
 
 export interface MsgElement<T extends MessageType = MessageType> {
-  /** 消息元素在列表中的引用消息索引 */ msg_idx: RefIdx
-  /** 该元素对应的消息发送者 */ author: never | unknown
-  /** 消息内容类型 */ message_type: T
+  /** 消息元素在列表中的引用消息索引 */ msg_idx?: MsgIdx
+  /** 该元素对应的消息发送者 */ author?: never | unknown
+  /** 消息内容类型 */ message_type?: T
   /** 消息正文内容 */ content: string
   /** 该元素携带的附件 */ attachments?: MessageAttachment[]
-  /** 结构化卡片消息数据 */ ark_data: T extends MessageType.Ark ? ArkData : never
+  /** 结构化卡片消息数据 */ ark_data?: T extends MessageType.Ark ? ArkData : never
   /** 嵌套消息元素列表 */ msg_elements?: MsgElement[]
 }
 
