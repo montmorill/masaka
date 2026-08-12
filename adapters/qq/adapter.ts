@@ -1,4 +1,4 @@
-import type { Element } from '@yarkjs/element'
+import type { Element, Fragment } from '@yarkjs/element'
 import type * as Universal from '@yarkjs/protocol'
 import type QQBot from './bot'
 import EventEmitter from 'node:events'
@@ -72,7 +72,7 @@ export class QQAdapter extends EventEmitter<Universal.EventMap> {
     }))
   }
 
-  decodeMessageContent(message: QQ.Message | QQ.GroupMessage): Element<'message'> {
+  decodeMessageContent(message: Omit<QQ.Message & Partial<QQ.GroupMessage>, 'author'>): Element<'message'> {
     const scene = this.decodeMessageScene(message.message_scene)
     const element = h.message(Object.assign({
       'id': message.id,
@@ -80,7 +80,26 @@ export class QQAdapter extends EventEmitter<Universal.EventMap> {
       'qq:type': QQ.MessageType.toString(message.message_type),
       ...withPrefix('qq:', scene),
     }))
-    element.children.push(message.content) // TODO: parse this
+    let content: Fragment = message.content
+    if (message.mentions) {
+      const mentionMap = new Map<string, Element<'mention'>>()
+      for (const mention of message.mentions) {
+        if (mention.scope === 'all') {
+          mentionMap.set('all', h.mention({ everyone: true }))
+          continue
+        }
+        // TODO: record user
+        mentionMap.set(mention.id, h.mention({ user: mention.id }))
+      }
+      content = h.pack(Array.from(h.replace(
+        message.content,
+        /<@(all|[0-9A-F]{32})>/g,
+        (raw, id) => mentionMap.get(id) || raw,
+      )))
+    }
+    element.children = h.unpack(content)
+    // TODO: quote
+    // TODO: ark
     return element
   }
 

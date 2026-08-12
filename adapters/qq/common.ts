@@ -319,7 +319,10 @@ export interface GroupMessage<T extends MessageType = MessageType> extends Messa
   /** 发送者 */ author: Member
   /** @deprecated */ group_id: string
   /** 群 OpenID */ group_openid: string
-  /** 消息中@的用户列表（不含@机器人自身） */ mentions?: Member[]
+  /** 消息中@的用户列表（不含@机器人自身） */ mentions?: (
+    | { is_you: true, scope: 'all', username: '全体成员' }
+    | { is_you: boolean, scope: 'single' } & Member
+  )[]
 }
 
 export interface DispatchEvents {
