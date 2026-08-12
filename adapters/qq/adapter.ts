@@ -39,25 +39,25 @@ export class QQAdapter extends EventEmitter<Universal.EventMap> {
     const adapt = <
       A extends any[],
       T extends keyof Universal.EventMap,
-      U extends keyof QQAdapter,
+      P extends keyof QQAdapter,
     >(
       eventName: T,
-      decoderName: QQAdapter[U] extends (...args: A) => Universal.EventMap[T] ? U : never,
+      parserName: QQAdapter[P] extends (...args: A) => Universal.EventMap[T] ? P : never,
     ) => (...args: A): void => // @ts-ignore
-      void this.emit(eventName, ...this[decoderName](...args))
+      void this.emit(eventName, ...this[parserName](...args))
 
-    emitter.on('C2C_MESSAGE_CREATE', adapt('message', 'decodeUserMessage'))
-    emitter.on('GROUP_MESSAGE_CREATE', adapt('message', 'decodeGroupMessage'))
-    emitter.on('GROUP_AT_MESSAGE_CREATE', adapt('message', 'decodeGroupMessage'))
+    emitter.on('C2C_MESSAGE_CREATE', adapt('message', 'parseUserMessage'))
+    emitter.on('GROUP_MESSAGE_CREATE', adapt('message', 'parseGroupMessage'))
+    emitter.on('GROUP_AT_MESSAGE_CREATE', adapt('message', 'parseGroupMessage'))
   }
 
-  decodeChannel(channel: { group_openid: string }): Universal.Channel {
+  parseChannel(channel: { group_openid: string }): Universal.Channel {
     return {
       id: channel.group_openid,
     }
   }
 
-  decodeUser(user: QQ.User): Universal.User {
+  parseUser(user: QQ.User): Universal.User {
     return {
       id: user.id,
       name: user.username,
@@ -65,15 +65,15 @@ export class QQAdapter extends EventEmitter<Universal.EventMap> {
     }
   }
 
-  decodeMember(member: QQ.Member, channel: Universal.Channel): Universal.Member {
+  parseMember(member: QQ.Member, channel: Universal.Channel): Universal.Member {
     return {
-      ...this.decodeUser(member),
+      ...this.parseUser(member),
       role: member.member_role,
       channel,
     }
   }
 
-  decodeMessageScene(scene: QQ.MessageScene): Record<string, string> {
+  parseMessageScene(scene: QQ.MessageScene): Record<string, string> {
     if (scene.source !== 'default')
       logger.warn('unexpected scene source', scene.source)
     return Object.fromEntries(scene.ext.map((pair) => {
@@ -84,7 +84,7 @@ export class QQAdapter extends EventEmitter<Universal.EventMap> {
     }))
   }
 
-  decodeArkData({ prompt, ark_type: type, ark_name: name, fields }: QQ.ArkData): Element<'ark'> {
+  parseArkData({ prompt, ark_type: type, ark_name: name, fields }: QQ.ArkData): Element<'ark'> {
     return h.ark({ prompt, type, name, ...fields })
   }
 
@@ -92,7 +92,7 @@ export class QQAdapter extends EventEmitter<Universal.EventMap> {
     return h.message(content) // TODO: parse forward content
   }
 
-  replaceMentions(content: string, mentions: NonNullable<QQ.GroupMessage['mentions']>): Fragment {
+  parseMentions(content: string, mentions: NonNullable<QQ.GroupMessage['mentions']>): Fragment {
     const mentionMap = new Map<string, Element<'mention'>>()
     for (const mention of mentions) {
       if (mention.scope === 'all')
@@ -110,16 +110,16 @@ export class QQAdapter extends EventEmitter<Universal.EventMap> {
     )))
   }
 
-  decodeMsgElements(msg_elements: QQ.MsgElement[]): Element<'message'> {
+  parseMsgElements(msg_elements: QQ.MsgElement[]): Element<'message'> {
     return h.message(JSON.stringify(msg_elements)) // TODO: parse message elements
   }
 
-  decodeMessageContent({
+  parseMessageContent({
     message_scene,
     message_type,
     ...message
   }: Omit<QQ.Message & Partial<QQ.GroupMessage>, 'author'>): Element<'message'> {
-    const scene = this.decodeMessageScene(message_scene)
+    const scene = this.parseMessageScene(message_scene)
     const element = h.message(Object.assign({
       'id': message.id,
       'timestamp': new Date(message.timestamp).valueOf(),
@@ -128,7 +128,7 @@ export class QQAdapter extends EventEmitter<Universal.EventMap> {
     }))
     let content: Fragment = message.content
     if (message_type === QQ.MessageType.Ark)
-      content = this.decodeArkData(message.ark_data).update(message.content)
+      content = this.parseArkData(message.ark_data).update(message.content)
     else if (message_type === QQ.MessageType.Parallel) // TODO: parallel
       console.warn('unknown message type', message_type, message)
     else if (message_type === QQ.MessageType.Forward)
@@ -136,28 +136,28 @@ export class QQAdapter extends EventEmitter<Universal.EventMap> {
     else if (message_type !== QQ.MessageType.Text && message_type !== QQ.MessageType.Quote)
       console.warn('unknown message type', message_type, message)
     if (message.mentions)
-      content = this.replaceMentions(message.content, message.mentions)
+      content = this.parseMentions(message.content, message.mentions)
     // TODO: attachments
     element.children = h.unpack(content)
     if (message_type === QQ.MessageType.Quote)
-      element.children.unshift(this.decodeMsgElements(message.msg_elements))
+      element.children.unshift(this.parseMsgElements(message.msg_elements))
     return element
   }
 
-  decodeUserMessage(message: QQ.Message): Universal.EventMap['message'] {
-    const sender = this.decodeUser(message.author)
+  parseUserMessage(message: QQ.Message): Universal.EventMap['message'] {
+    const sender = this.parseUser(message.author)
     if (sender.name === '')
       delete sender.name
     else
       console.warn('unexpected C2C_MESSAGE_CREATE author.username', sender.name)
-    const element = this.decodeMessageContent(message)
+    const element = this.parseMessageContent(message)
     return [sender, element]
   }
 
-  decodeGroupMessage(message: QQ.GroupMessage): Universal.EventMap['message'] {
-    const channel = this.decodeChannel(message)
-    const sender = this.decodeMember(message.author, channel)
-    const element = this.decodeMessageContent(message)
+  parseGroupMessage(message: QQ.GroupMessage): Universal.EventMap['message'] {
+    const channel = this.parseChannel(message)
+    const sender = this.parseMember(message.author, channel)
+    const element = this.parseMessageContent(message)
     return [sender, element]
   }
 }
