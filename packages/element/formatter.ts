@@ -1,6 +1,6 @@
 import type { InspectColor, InspectOptions } from 'node:util'
 import type { ElementJSON } from './jsx-runtime'
-import util, { inspect } from 'node:util'
+import { inspect, styleText } from 'node:util'
 import { Element, Fragment } from './jsx-runtime'
 
 export interface FormatOptions extends InspectOptions {
@@ -44,7 +44,7 @@ export class Formatter {
   }
 
   style(type: keyof typeof Formatter.styles, data: any): string {
-    return this.opts.colors ? util.styleText(Formatter.styles[type], data) : data
+    return this.opts.colors ? styleText(Formatter.styles[type], data) : data
   }
 
   string(value: string): void {

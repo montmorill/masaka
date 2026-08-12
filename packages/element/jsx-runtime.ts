@@ -1,7 +1,7 @@
 import type { Merge, Overloads, Pretty, Xor } from '@yarkjs/utils'
 import type { Inspectable } from 'node:util'
 import type { FormatOptions } from './formatter'
-import util from 'node:util'
+import { inspect } from 'node:util'
 import { BufferFormatter } from './formatter'
 
 export const Fragment = 'template'
@@ -101,7 +101,7 @@ export class Element<T extends keyof JSXElements = keyof JSXElements> implements
     return formatter.buffer
   }
 
-  [util.inspect.custom](_: any, opts: FormatOptions): string {
+  [inspect.custom](_: any, opts: FormatOptions): string {
     return this.toString(opts)
   }
 }
