@@ -1,4 +1,4 @@
-import type { Element, Fragment, MaybeFragment } from '@yarkjs/element'
+import type { Element, Fragment } from '@yarkjs/element'
 import type * as Universal from '@yarkjs/protocol'
 import type QQBot from './bot'
 import EventEmitter from 'node:events'
@@ -115,7 +115,7 @@ export class QQAdapter extends EventEmitter<Universal.EventMap> {
   }
 
   parseMsgElements(msg_elements: QQ.MsgElement[], ref_msg_idx: QQ.RefMsgIdx): Element<'quote'> {
-    return h.quote({ 'qq:msg_idx': ref_msg_idx }, ...msg_elements as unknown[] as MaybeFragment[])
+    return h.quote({ 'qq:msg_idx': ref_msg_idx }, ...msg_elements as unknown[] as Fragment[])
     // TODO: parse message elements
   }
 
