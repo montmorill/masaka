@@ -135,7 +135,7 @@ export type Shard = [number, number]
 export type AccessToken = `QQBot ${string}`
 export type MessageId = `ROBOT1.0_${string}`
 export type MsgIdx = `REFIDX_${string}`
-export type RefMsgIdx = `TMP_${string}`
+export type RefMsgIdx = MsgIdx | `TMP_${string}`
 
 export interface Login {
   id: string
