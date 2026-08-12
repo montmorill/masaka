@@ -89,7 +89,13 @@ export class Element<T extends keyof JSXElements = keyof JSXElements> implements
     }
   }
 
-  toString(opts: FormatOptions = { colors: false, compact: true }): string {
+  toString(opts: FormatOptions = {
+    colors: false,
+    maxArrayLength: Infinity,
+    maxStringLength: Infinity,
+    breakLength: Infinity,
+    compact: true,
+  }): string {
     const formatter = new BufferFormatter(opts)
     formatter.element(this)
     return formatter.buffer

@@ -3,18 +3,7 @@ import type { ElementJSON } from './jsx-runtime'
 import util, { inspect } from 'node:util'
 import { Element, Fragment } from './jsx-runtime'
 
-export interface FormatOptions extends Pick<
-  InspectOptions,
-  | 'showHidden'
-  | 'depth'
-  | 'colors'
-  // TODO: | 'maxArrayLength'
-  // TODO: | 'maxStringLength'
-  // TODO: | 'breakLength'
-  | 'compact'
-  | 'sorted'
-  | 'numericSeparator'
-> {
+export interface FormatOptions extends InspectOptions {
   wrapText?: boolean
   highlight?: (code: string) => string
 }
