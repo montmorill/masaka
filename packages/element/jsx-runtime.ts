@@ -1,4 +1,6 @@
 import type { Merge, Overloads, Pretty, Xor } from '@yarkjs/utils'
+import type { Inspectable } from 'node:util'
+import util from 'node:util'
 import { BufferFormatter } from './formatter'
 
 export const Fragment = 'template'
@@ -60,7 +62,7 @@ export interface ElementJSON<T extends keyof JSXElements = keyof JSXElements> {
   children: Fragment[]
 }
 
-export class Element<T extends keyof JSXElements = keyof JSXElements> {
+export class Element<T extends keyof JSXElements = keyof JSXElements> implements Inspectable {
   type: ElementType<T>
   attrs: ElementAttrs<T> = {} as any
   children: Fragment[] = []
@@ -90,6 +92,10 @@ export class Element<T extends keyof JSXElements = keyof JSXElements> {
     const formatter = new BufferFormatter()
     formatter.element(this)
     return formatter.buffer
+  }
+
+  [util.inspect.custom](): string {
+    return this.toString()
   }
 }
 
