@@ -9,7 +9,7 @@ declare module '@yarkjs/element' {
 
 export interface Message {
   id: string
-  forward?: true
+  timestamp: number
 }
 
 export interface User {
