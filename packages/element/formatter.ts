@@ -75,7 +75,7 @@ export class Formatter {
   }
 
   element(element: ElementJSON): void {
-    const tag = this.styled('green', element.type === Fragment ? '' : element.type)
+    const tag = this.styled('yellow', element.type === Fragment ? '' : element.type)
     if (this.needLine)
       this.newLine()
     this.print(`<${tag}`)
