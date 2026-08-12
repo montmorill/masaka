@@ -1,0 +1,9 @@
+{
+  "name": "@yarkjs/formatter",
+  "type": "module",
+  "version": "0.0.0",
+  "dependencies": {
+    "@babel/code-frame": "^8.0.0",
+    "@yarkjs/element": "workspace:^"
+  }
+}

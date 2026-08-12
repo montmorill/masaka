@@ -1,6 +1,4 @@
 import type { Merge, Overloads, Pretty, Xor } from '@yarkjs/utils'
-import type { FormatOptions } from './formatter'
-import util from 'node:util'
 import { BufferFormatter } from './formatter'
 
 export const Fragment = 'template'
@@ -86,14 +84,10 @@ export class Element<T extends keyof JSXElements = keyof JSXElements> {
     }
   }
 
-  toString(opts: FormatOptions = { colors: false, compact: 'inline' }): string {
-    const formatter = new BufferFormatter(opts)
+  toString(): string {
+    const formatter = new BufferFormatter()
     formatter.element(this)
     return formatter.buffer
-  }
-
-  [util.inspect.custom](_: any, opts: FormatOptions): string {
-    return this.toString(opts)
   }
 }
 
