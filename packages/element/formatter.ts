@@ -12,8 +12,8 @@ export interface FormatOptions extends Pick<
   // TODO: | 'maxStringLength'
   // TODO: | 'breakLength'
   | 'compact'
-  // TODO: | 'sorted'
-  // TODO: | 'numericSeparator'
+  | 'sorted'
+  | 'numericSeparator'
 > {
   wrapText?: boolean
   highlight?: (code: string) => string
@@ -63,12 +63,7 @@ export class Formatter {
   }
 
   inspect(object: unknown): string {
-    return inspect(
-      object,
-      this.opts.showHidden,
-      (this.opts.depth ?? 2) - 1,
-      this.opts.colors,
-    )
+    return inspect(object, this.opts)
   }
 
   highlight(object: unknown): string {
@@ -85,7 +80,15 @@ export class Formatter {
   }
 
   attrs(attrs: Record<string, unknown>): void {
-    for (const [key, value] of Object.entries(attrs)) {
+    const entries = Object.entries(attrs)
+    if (this.opts.sorted === true) {
+      entries.sort()
+    }
+    else if (this.opts.sorted) {
+      const compare = this.opts.sorted
+      entries.sort(([a], [b]) => compare(a, b))
+    }
+    for (const [key, value] of entries) {
       this.print(` ${this.style('attr', key)}`)
       if (value === true)
         continue
