@@ -129,13 +129,12 @@ export class QQAdapter extends EventEmitter<Universal.EventMap> {
     let content: Fragment = message.content
     if (message_type === QQ.MessageType.Ark)
       content = this.decodeArkData(message.ark_data).update(message.content)
-    else if (message_type === QQ.MessageType.Parallel)
-      console.warn('unknown message type', Object.assign(message, { message_scene, message_type }))
-      // TODO: parallel
+    else if (message_type === QQ.MessageType.Parallel) // TODO: parallel
+      console.warn('unknown message type', message_type, message)
     else if (message_type === QQ.MessageType.Forward)
       content = this.parseForwardContent(message.content)
     else if (message_type !== QQ.MessageType.Text && message_type !== QQ.MessageType.Quote)
-      console.warn('unknown message type', Object.assign(message, { message_scene, message_type }))
+      console.warn('unknown message type', message_type, message)
     if (message.mentions)
       content = this.replaceMentions(message.content, message.mentions)
     // TODO: attachments
