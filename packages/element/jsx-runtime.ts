@@ -5,22 +5,10 @@ import { BufferFormatter } from './formatter'
 
 export const Fragment = 'template'
 
-export interface Elements {
-  mention(attrs: { everyone: true }): Element<'mention'>
-  mention(attrs: { user: string }): Element<'mention'>
-  mention(attrs: { channel: string }): Element<'mention'>
-  button(attrs: { text: string }): Element<'button'>
-  button(attrs: { href: string }): Element<'button'>
-  button(attrs: { action: string }): Element<'button'>
-}
+export interface Elements {}
 
 export interface ElementProps {
   [Fragment]: object
-  link: { href: string, title?: string }
-  audio: { src: string, title?: string }
-  image: { src: string, title?: string }
-  video: { src: string, title?: string }
-  file: { src: string, title?: string }
 }
 
 export type Fragment = Element | string
