@@ -208,79 +208,84 @@ export interface KnownArkDataTypes {
     | { prompt: `创建了群相册《${string}》` }
   )
   /** 图文 H5 */ tuwen: {
-    ark_name: '图文H5'
-    title: string
-    jump_url: string
     /** @type `[分享]${this['title']}` */
     prompt: `[分享]${string}`
+    ark_name: '图文H5'
+    /** 标题 */ title: string
+    /** 跳转链接 */ jump_url: string
   } & (
-    | { tag: '班级作业' }
-    | { tag: string, desc: string }
+    | { /** 来源标签 */ tag: '班级作业' }
+    | { /** 来源标签 */ tag: string, /** 描述 */ desc: string }
   )
   /** 图文卡片 */ feed: {
-    ark_name: '图文卡片'
-    tag: '群相册'
-    title: `群相册《${string}》`
     /** @type `群相册《${this['title']}》` */
-    jump_url: string
     prompt: `群相册《${string}》`
+    ark_name: '图文卡片'
+    /** 来源标签 */ tag: '群相册'
+    /** 标题 */ title: `群相册《${string}》`
+    /** 跳转链接 */ jump_url: string
   }
   /** 小程序 */ miniapp: {
-    ark_name: '小程序'
-    title: string
-    preview: string
-    source: string
-    source_logo: string
     /** @type `[QQ小程序]${this['title']}` */
     prompt: `[QQ小程序]${string}`
+    ark_name: '小程序'
+    /** 标题 */ title: string
+    /** 预览图 */ preview: string
+    /** 来源名称 */ source: string
+    /** 来源图标 */ source_logo: string
   }
   /** 位置卡片 */ map: {
-    ark_name: '位置卡片'
-    address: string
-    desc: string
     /** @type `[位置]${this['desc']}` */
     prompt: `[位置]${string}`
+    ark_name: '位置卡片'
+    /** 地址 */ address: string
+    /** 描述 */ desc: string
   }
   /** 好友名片 */ contact_card: {
     ark_name: '好友名片'
     type: 'contact'
   } & ({
-    tag: '推荐好友'
-    nickname: string
-    /** @type `账号：${this['uin']}` */
-    contact: `账号：${number}`
-    /** @type `http://thirdqq.qlogo.cn/g?b=oidb&k=${this['uin']}&kti=${this['uin']}&s=140` */
-    avatar: `http://thirdqq.qlogo.cn/g?b=oidb&k=${string}&kti=${string}&s=140`
-    /** @type `mqqapi://card/show_pslcard?src_type=internal&source=sharecard&version=1&uin=${this['uin']}` */
-    jumpUrl: `mqqapi://card/show_pslcard?src_type=internal&source=sharecard&version=1&uin=${number}`
     /** @type `推荐联系人：${this['nickname']}` */
     prompt: `推荐联系人：${string}`
+    /** 来源标签 */ tag: '推荐好友'
+    /** 昵称 */ nickname: string
+    /** 头像 @type `http://thirdqq.qlogo.cn/g?b=oidb&k=${this['uin']}&kti=${this['uin']}&s=140` */
+    avatar: `http://thirdqq.qlogo.cn/g?b=oidb&k=${string}&kti=${string}&s=140`
+    /** 跳转链接 @type `mqqapi://card/show_pslcard?src_type=internal&source=sharecard&version=1&uin=${this['uin']}` */
+    jump_url: `mqqapi://card/show_pslcard?src_type=internal&source=sharecard&version=1&uin=${number}`
+    /** @type `账号：${this['uin']}` */
+    contact: `账号：${number}`
   } | {
-    tag: '群名片'
-    nickname: string
+    /** @type `群名片：${this['nickname']}` */
+    prompt: `群名片: ${string}`
+    /** 来源标签 */ tag: '群名片'
+    /** 昵称 */ nickname: string
+    /** 头像 @type `https://p.qlogo.cn/gh/${this['uin']}/${this['uin']}/100` */
+    avatar: `https://p.qlogo.cn/gh/${number}/${number}/100`
+    /** 跳转链接 @type `mqqapi://card/show_pslcard?authSig=${string}&card_type=group&src_type=internal&uin=${this['uin']}&version=1&wSourceSubID=40001` */
+    jump_url: `mqqapi://card/show_pslcard?authSig=${string}&card_type=group&src_type=internal&uin=${number}&version=1&wSourceSubID=40001`
     contact: '在这里，发现更多~'
     /** @type `https://p.qlogo.cn/gh/${this['uin']}/${this['uin']}/100` */
-    avatar: `https://p.qlogo.cn/gh/${number}/${number}/100`
-    /** @type  `mqqapi://card/show_pslcard?authSig=${string}&card_type=group&src_type=internal&uin=${this['uin']}&version=1&wSourceSubID=40001` */
-    jumpUrl: `mqqapi://card/show_pslcard?authSig=${string}&card_type=group&src_type=internal&uin=${number}&version=1&wSourceSubID=40001`
-    /** @type `群名片：${this['nickname']}` */ prompt: `群名片: ${string}`
   })
   /** 视频分享 */ video_share: unknown
   /** 一起听歌 */ music_together: {
+    /** @type `[开启了一起听歌] ${this['desc']}` */
+    prompt: `[开启了一起听歌] ${string}`
     ark_name: '一起听歌'
-    title: '一起听歌'
-    desc: string
+    /** 标题 */ title: '一起听歌'
+    /** 描述 */ desc: string
     songId: string
     cover: `http://img.tencentmusic.com/${string}`
     type: 'music_invite' | unknown
     inviteType: 'listen' | unknown
     button: '加入一起听歌' | string
-    /** @type `[开启了一起听歌] ${this['desc']}` */
-    prompt: `[开启了一起听歌] ${string}`
   }
 }
 
 export interface ArkData<T extends string = string> {
+  /** 卡片消息中的用户操作提示文本 */ prompt:
+  KnownArkDataTypes extends Record<T, { prompt: string }>
+    ? KnownArkDataTypes[T]['prompt'] : string
   /** 卡片消息类型标识 */ ark_type: T
   /** 卡片消息类型的中文名称 */ ark_name:
   KnownArkDataTypes extends Record<T, { ark_name: string }>
@@ -288,9 +293,6 @@ export interface ArkData<T extends string = string> {
   /** 卡片消息字段 */ fields: T extends keyof KnownArkDataTypes
     ? Omit<KnownArkDataTypes[T], 'ark_name' | 'prompt'>
     : Record<string, string>
-  /** 卡片消息中的用户操作提示文本 */ prompt:
-  KnownArkDataTypes extends Record<T, { prompt: string }>
-    ? KnownArkDataTypes[T]['prompt'] : string
 }
 
 export interface MsgElement<T extends MessageType = MessageType> {
@@ -312,7 +314,7 @@ export interface Message<T extends MessageType = MessageType> {
   /** 消息场景上下文 */ message_scene: MessageScene
   /** 消息附件 */ attachments?: MessageAttachment[]
   /** 结构化卡片消息数据 */ ark_data: T extends MessageType.Ark ? ArkData : never
-  /** 消息元素列表 */ msg_elements: MsgElement[]
+  /** 消息元素列表 */ msg_elements: T extends MessageType.Quote ? MsgElement[] : never
 }
 
 export interface GroupMessage<T extends MessageType = MessageType> extends Message<T> {

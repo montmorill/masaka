@@ -7,6 +7,18 @@ import { logger } from '@yarkjs/logger'
 import { withPrefix } from '@yarkjs/utils'
 import * as QQ from './common'
 
+export type Ark<T extends string = string, Data extends QQ.ArkData = QQ.ArkData<T>> = {
+  /** 卡片消息中的用户操作提示文本 */ prompt: Data['prompt']
+  /** 卡片消息类型标识 */ type: T
+  /** 卡片消息类型的中文名称 */ name: Data['ark_name']
+} & Data['fields']
+
+declare module '@yarkjs/element' {
+  interface Elements {
+    ark: Ark
+  }
+}
+
 declare module '@yarkjs/protocol' {
   interface User {
     bot: boolean
@@ -81,7 +93,13 @@ export class QQAdapter extends EventEmitter<Universal.EventMap> {
       ...withPrefix('qq:', scene),
     }))
     let content: Fragment = message.content
-    if (message.mentions) {
+    if (message.message_type === QQ.MessageType.Ark) {
+      const { prompt, ark_type: type, ark_name: name, fields } = message.ark_data
+      content = h.ark({ prompt, type, name, ...fields }, message.content)
+    }
+    // TODO: forward
+    // TODO: quote
+    else if (message.mentions) {
       const mentionMap = new Map<string, Element<'mention'>>()
       for (const mention of message.mentions) {
         if (mention.scope === 'all') {
@@ -97,9 +115,8 @@ export class QQAdapter extends EventEmitter<Universal.EventMap> {
         (raw, id) => mentionMap.get(id) || raw,
       )))
     }
+    // TODO: attachments
     element.children = h.unpack(content)
-    // TODO: quote
-    // TODO: ark
     return element
   }
 
