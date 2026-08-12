@@ -55,9 +55,9 @@ export class Formatter {
   }
 
   object(object: any): void {
-    const string = typeof object === 'function'
-      ? object.toString()
-      : JSON.stringify(object) ?? String(object)
+    const string = typeof object === 'undefined' ? 'undefined'
+      : typeof object === 'function' ? object.toString()
+        : JSON.stringify(object)
     this.indented(`{${this.opts.colors ? highlight(string) : string}}`)
   }
 
