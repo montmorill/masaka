@@ -84,6 +84,24 @@ export class QQAdapter extends EventEmitter<Universal.EventMap> {
     }))
   }
 
+  replaceMentions(content: string, mentions: NonNullable<QQ.GroupMessage['mentions']>): Fragment {
+    const mentionMap = new Map<string, Element<'mention'>>()
+    for (const mention of mentions) {
+      if (mention.scope === 'all')
+        mentionMap.set('all', h.mention({ everyone: true }, `@${mention.username}`))
+      else if (mention.scope === 'single')
+        mentionMap.set(mention.id, h.mention({ user: mention.id }, `@${mention.username}`))
+      // TODO: record user
+      else
+        logger.warn('unknown mention', mention)
+    }
+    return h.pack(Array.from(h.replace(
+      content,
+      /<@(all|[0-9A-F]{32})>/g,
+      (raw, id) => mentionMap.get(id) || raw,
+    )))
+  }
+
   decodeMessageContent(message: Omit<QQ.Message & Partial<QQ.GroupMessage>, 'author'>): Element<'message'> {
     const scene = this.decodeMessageScene(message.message_scene)
     const element = h.message(Object.assign({
@@ -99,29 +117,20 @@ export class QQAdapter extends EventEmitter<Universal.EventMap> {
     }
     else if (message.message_type === QQ.MessageType.Parallel) {
       console.warn('unknown message type', message)
+      // TODO: parallel
     }
     else if (message.message_type === QQ.MessageType.Forward) {
       // TODO: forward
     }
-    else if (message.message_type === QQ.MessageType.Quote) {
-    // TODO: quote
+    else if (message.message_type !== QQ.MessageType.Text
+      && message.message_type !== QQ.MessageType.Quote) {
+      console.warn('unknown message type', message)
     }
-    else if (message.mentions) {
-      const mentionMap = new Map<string, Element<'mention'>>()
-      for (const mention of message.mentions) {
-        if (mention.scope === 'all')
-          mentionMap.set('all', h.mention({ everyone: true }))
-        else if (mention.scope === 'single')
-          mentionMap.set(mention.id, h.mention({ user: mention.id }))
-          // TODO: record user
-        else
-          logger.warn('unknown mention', mention)
-      }
-      content = h.pack(Array.from(h.replace(
-        message.content,
-        /<@(all|[0-9A-F]{32})>/g,
-        (raw, id) => mentionMap.get(id) || raw,
-      )))
+    if (message.mentions) {
+      content = this.replaceMentions(message.content, message.mentions)
+    }
+    if (message.message_type === QQ.MessageType.Quote) {
+      // TODO: quote
     }
     // TODO: attachments
     element.children = h.unpack(content)
