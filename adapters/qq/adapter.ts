@@ -73,7 +73,7 @@ export class QQAdapter extends EventEmitter<Universal.EventMap> {
     return {
       ...this.parseUser(member),
       role: member.member_role,
-      channel,
+      channel: channel.id,
     }
   }
 

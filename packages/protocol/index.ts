@@ -38,14 +38,14 @@ export interface User {
 }
 
 export interface Member extends User {
-  channel: Channel
+  channel: Channel['id']
   role?: 'owner' | 'admin' | 'member'
 }
 
 export interface Channel {
   id: string
   name?: string
-  guild?: Guild
+  guild?: Guild['id']
 }
 
 export interface Guild {
