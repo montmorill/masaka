@@ -1,14 +1,20 @@
 import type { Element } from '@yarkjs/element'
 import type * as Universal from '@yarkjs/protocol'
 import type QQBot from './bot'
-import type * as QQ from './common'
 import EventEmitter from 'node:events'
 import h from '@yarkjs/element'
 import { logger } from '@yarkjs/logger'
+import { withPrefix } from '@yarkjs/utils'
+import * as QQ from './common'
 
 declare module '@yarkjs/protocol' {
+  interface User {
+    bot: boolean
+  }
+
   interface Message {
-    'qq:refidx': QQ.RefIdx
+    'qq:type': QQ.MessageType.StringTag
+    'qq:msg_idx': QQ.RefIdx
   }
 }
 
@@ -50,6 +56,7 @@ export class QQAdapter extends EventEmitter<Universal.EventMap> {
     return {
       id: user.id,
       name: user.username,
+      bot: user.bot,
     }
   }
 
@@ -73,10 +80,13 @@ export class QQAdapter extends EventEmitter<Universal.EventMap> {
   }
 
   decodeMessageContent(message: QQ.Message | QQ.GroupMessage): Element<'message'> {
-    const { msg_idx } = this.decodeMessageScene(message.message_scene)
-    if (!msg_idx?.startsWith('REFIDX_'))
-      console.warn('unknown refidx', msg_idx)
-    const element = h.message({ 'id': message.id, 'qq:refidx': msg_idx as any })
+    const scene = this.decodeMessageScene(message.message_scene)
+    const element = h.message(Object.assign({
+      'id': message.id,
+      'timestamp': new Date(message.timestamp).valueOf(),
+      'qq:type': QQ.MessageType.toString(message.message_type),
+      ...withPrefix('qq:', scene),
+    }))
     element.children.push(message.content) // TODO: parse this
     return element
   }

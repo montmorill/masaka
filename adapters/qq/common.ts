@@ -162,6 +162,22 @@ export enum MessageType {
   Forward = 102,
   Quote = 103,
 }
+
+export namespace MessageType {
+  export const stringMap = {
+    [MessageType.Text]: 'text',
+    [MessageType.Ark]: 'ark',
+    [MessageType.Parallel]: 'parallel',
+    [MessageType.Forward]: 'forward',
+    [MessageType.Quote]: 'quote',
+  } as const
+  export type StringMap = typeof stringMap
+  export type StringTag = StringMap[MessageType]
+  export function toString(type: MessageType): StringTag {
+    return stringMap[type]
+  }
+}
+
 export interface MessageScene {
   ext: [
     ...[`ref_msg_idx=${RefIdx}`] | [],
