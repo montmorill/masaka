@@ -1,6 +1,7 @@
 /* eslint-disable antfu/no-top-level-await */
 
 import { env } from 'node:process'
+import { inspect } from 'node:util'
 import { logger } from '@yarkjs/logger'
 import { noop } from '@yarkjs/utils'
 import { QQAdapter } from './adapter'
@@ -8,6 +9,8 @@ import QQBot from './bot'
 import * as QQ from './common'
 import { QQBotServer } from './webhook'
 import { QQBotWS } from './websocket'
+
+inspect.defaultOptions.compact = false
 
 logger.debug = noop
 

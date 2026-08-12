@@ -1,5 +1,6 @@
 import type { Merge, Overloads, Pretty, Xor } from '@yarkjs/utils'
 import type { Inspectable } from 'node:util'
+import type { FormatOptions } from './formatter'
 import util from 'node:util'
 import { BufferFormatter } from './formatter'
 
@@ -88,14 +89,14 @@ export class Element<T extends keyof JSXElements = keyof JSXElements> implements
     }
   }
 
-  toString(): string {
-    const formatter = new BufferFormatter()
+  toString(opts: FormatOptions = { colors: false, compact: true }): string {
+    const formatter = new BufferFormatter(opts)
     formatter.element(this)
     return formatter.buffer
   }
 
-  [util.inspect.custom](): string {
-    return this.toString()
+  [util.inspect.custom](_: any, opts: FormatOptions): string {
+    return this.toString(opts)
   }
 }
 

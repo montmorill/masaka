@@ -1,23 +1,66 @@
+import type { InspectColor, InspectOptions } from 'node:util'
 import type { ElementJSON } from './jsx-runtime'
+import util from 'node:util'
+import { highlight } from '@babel/code-frame'
 import { Element, Fragment } from './jsx-runtime'
 
+export type FormatOptions = Pick<InspectOptions, 'colors' | 'compact'>
+
 export class Formatter {
-  constructor(readonly print: (str: string) => void) { }
+  private needLine = false
+  private depth = 0
+
+  constructor(
+    readonly print: (str: string) => void,
+    readonly opts: FormatOptions = {},
+  ) {
+    for (const key of Object.keys(util.inspect.defaultOptions)) {
+      if (!(key in this.opts)) // @ts-ignore
+        this.opts[key] = util.inspect.defaultOptions[key]
+    }
+  }
+
+  nest(): Formatter {
+    const formatter = new Formatter(this.print, this.opts)
+    formatter.depth = this.depth + 1
+    return formatter
+  }
+
+  newLine(): void {
+    if (this.opts.compact)
+      return
+    this.print(`\n${'  '.repeat(this.depth)}`)
+    this.needLine = false
+  }
+
+  styled(format: InspectColor, data: any): string {
+    return this.opts.colors ? util.styleText(format, data) : data
+  }
 
   string(value: string): void {
-    this.print(JSON.stringify(value))
+    this.print(this.styled('green', JSON.stringify(value)))
+  }
+
+  indented(value: string): void {
+    this.needLine = false
+    const lines = value.split('\n')
+    this.print(lines.shift()!)
+    for (const line of lines) {
+      this.newLine()
+      this.print(line)
+    }
   }
 
   object(object: any): void {
     const string = typeof object === 'undefined' ? 'undefined'
       : typeof object === 'function' ? object.toString()
         : JSON.stringify(object)
-    this.print(`{${string}}`)
+    this.indented(`{${this.opts.colors ? highlight(string) : string}}`)
   }
 
   attrs(attrs: Record<string, any>): void {
     for (const [key, value] of Object.entries(attrs)) {
-      this.print(` ${key}`)
+      this.print(` ${this.styled('red', key)}`)
       if (value === true)
         continue
       this.print('=')
@@ -29,7 +72,9 @@ export class Formatter {
   }
 
   element(element: ElementJSON): void {
-    const tag = element.type === Fragment ? '' : element.type
+    const tag = this.styled('yellow', element.type === Fragment ? '' : element.type)
+    if (this.needLine)
+      this.newLine()
     this.print(`<${tag}`)
     this.attrs(element.attrs)
     if (element.children.length === 0) {
@@ -37,24 +82,38 @@ export class Formatter {
     }
     else {
       this.print('>')
-      for (const child of element.children)
-        this.node(child)
+      if (this.opts.compact && element.children.length === 1) {
+        this.node(element.children[0]!)
+      }
+      else {
+        const nested = this.nest()
+        nested.newLine()
+        for (const child of element.children)
+          nested.node(child)
+        this.newLine()
+      }
       this.print(`</${tag}>`)
     }
+    this.needLine = true
   }
 
   node(node: unknown): void {
     if (node instanceof Element)
       return this.element(node)
     if (typeof node === 'string')
-      return this.print(node)
-    return this.object(node)
+      return this.indented(node)
+    if (this.opts.compact)
+      return this.object(node)
+    if (this.needLine)
+      this.newLine()
+    this.object(node)
+    this.needLine = true
   }
 }
 
 export class BufferFormatter extends Formatter {
   buffer = ''
-  constructor() {
-    super(text => this.buffer += text)
+  constructor(opts: FormatOptions = {}) {
+    super(text => this.buffer += text, opts)
   }
 }
