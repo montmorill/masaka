@@ -109,13 +109,13 @@ export class QQAdapter extends EventEmitter<Universal.EventMap> {
     else if (message.mentions) {
       const mentionMap = new Map<string, Element<'mention'>>()
       for (const mention of message.mentions) {
-        if (mention.scope === 'all') {
+        if (mention.scope === 'all')
           mentionMap.set('all', h.mention({ everyone: true }))
-          continue
-        }
-        logger.assert(mention.scope === 'single', 'unknown mention.scope', mention.scope)
-        mentionMap.set(mention.id, h.mention({ user: mention.id }))
-        // TODO: record user
+        else if (mention.scope === 'single')
+          mentionMap.set(mention.id, h.mention({ user: mention.id }))
+          // TODO: record user
+        else
+          logger.warn('unknown mention', mention)
       }
       content = h.pack(Array.from(h.replace(
         message.content,
