@@ -5,13 +5,14 @@ import { Element, Fragment } from './jsx-runtime'
 
 export interface FormatOptions extends InspectOptions {
   wrapText?: boolean
+  /** Optional syntax highlighter used for objects when colors are enabled. */
   highlight?: (code: string) => string
 }
 
 export class Formatter {
   private depth = 0
   private column = 0
-  readonly opts: Required<FormatOptions>
+  readonly opts: Required<InspectOptions> & FormatOptions
 
   get compact(): boolean {
     return typeof this.opts.compact === 'undefined' ? true
@@ -88,17 +89,13 @@ export class Formatter {
     this.write(`... ${json.length - max} more character${json.length - max > 1 ? 's' : ''}`)
   }
 
-  inspect(object: unknown): string {
-    return inspect(object, this.opts)
-  }
-
   highlight(object: unknown): string {
     if (this.opts.colors && this.opts.highlight) {
       const code = typeof object === 'function' ? object.toString()
         : object === undefined ? 'undefined' : JSON.stringify(object)
       return this.opts.highlight(code)
     }
-    return inspect(object)
+    return inspect(object, this.opts)
   }
 
   object(object: unknown): void {
@@ -238,10 +235,9 @@ export class Formatter {
 }
 
 export namespace Formatter {
-  export const defaultOptions: Required<FormatOptions> = {
+  export const defaultOptions: Required<InspectOptions> & FormatOptions = {
     ...inspect.defaultOptions as Required<InspectOptions>,
     wrapText: false,
-    highlight: code => code,
   }
 
   /** Matches the ANSI escape sequences produced by styleText. */
