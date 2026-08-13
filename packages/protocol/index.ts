@@ -12,10 +12,10 @@ declare module '@yarkjs/element' {
 
   interface ElementProps {
     link: { href: string, title?: string }
-    audio: { src: string, title?: string }
-    image: { src: string, title?: string }
-    video: { src: string, title?: string }
-    file: { src: string, title?: string }
+    audio: { src: string, title?: string, size?: number }
+    image: { src: string, title?: string, size?: number, width?: number, height?: number }
+    video: { src: string, title?: string, size?: number, width?: number, height?: number }
+    file: { src: string, title?: string, size?: number }
     message: Message
     quote: Quote
     author: User | Member

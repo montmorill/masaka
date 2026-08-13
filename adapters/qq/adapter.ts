@@ -16,6 +16,10 @@ export type Ark<T extends string = string, Data extends QQ.ArkData = QQ.ArkData<
 declare module '@yarkjs/element' {
   interface Elements {
     ark: Ark
+    audio: {
+      'qq:voice_wav_url': string
+      'qq:asr_refer_text': string
+    }
   }
 }
 
@@ -114,6 +118,29 @@ export class QQAdapter extends EventEmitter<Universal.EventMap> {
     )))
   }
 
+  parseImageAttachment(attrs: Element<'image'>['attrs'], { width, height, content, ...attachment }:
+  QQ.MessageAttachmentContentTypes['image/jpeg' | 'image/png' | 'image/gif']): Element<'image'> {
+    return h.image(Object.assign(attrs, { width, height }, withPrefix('qq:', attachment)), content)
+  }
+
+  parseAttachments(attachments: QQ.MessageAttachment[]): Element<'file' | 'audio' | 'image' | 'video'>[] {
+    const elements = []
+    for (const { url, filename, size, ...attachment } of attachments) {
+      const attrs = { src: url, title: filename, size, type: attachment.content_type }
+      if (attachment.content_type === 'file')
+        elements.push(h.file(Object.assign(attrs)))
+      else if (attachment.content_type === 'voice')
+        elements.push(h.audio(Object.assign(attrs)))
+      else if (attachment.content_type === 'video/mp4')
+        elements.push(h.video(Object.assign(attrs, attachment)))
+      else if (attachment.content_type.startsWith('image/'))
+        elements.push(this.parseImageAttachment(attrs, attachment))
+      else
+        console.warn('unknown attachment', attachments[elements.length])
+    }
+    return elements
+  }
+
   parseMsgElements(msg_elements: QQ.MsgElement[], ref_msg_idx: QQ.RefMsgIdx): Element<'quote'> {
     const element = h.quote({ 'qq:msg_idx': ref_msg_idx })
     for (const { ...msg_element } of msg_elements) {
@@ -166,14 +193,11 @@ export class QQAdapter extends EventEmitter<Universal.EventMap> {
       console.warn('unknown message type', message_type, message)
     if (message.mentions)
       content = this.parseMentions(message.content, message.mentions)
-    // TODO: attachments
-    element.children = h.unpack(content)
-    if (message_type === QQ.MessageType.Quote) {
-      element.children.unshift(this.parseMsgElements(
-        message.msg_elements,
-        ref_msg_idx as QQ.RefMsgIdx,
-      ))
-    }
+    if (message_type === QQ.MessageType.Quote)
+      element.children.push(this.parseMsgElements(message.msg_elements, ref_msg_idx as QQ.RefMsgIdx))
+    if (message.attachments)
+      element.children.push(...this.parseAttachments(message.attachments))
+    element.children.push(...h.unpack(content))
     return element
   }
 
