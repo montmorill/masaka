@@ -102,7 +102,31 @@ export class Formatter {
     this.multiline(`{${this.highlight(object)}}`)
   }
 
-  attrs(attrs: Record<string, unknown>): void {
+  /** Print a single attr. */
+  private writeAttr(key: string, value: unknown): void {
+    this.write(this.style('attr', key))
+    if (value === true)
+      return
+    this.write('=')
+    if (typeof value === 'string')
+      this.string(value)
+    else
+      this.object(value)
+  }
+
+  /** Rendered width of a single attr, including the leading space. */
+  private sizeAttr(key: string, value: unknown): number {
+    const formatter = new BufferFormatter({ ...this.opts, colors: false, compact: true, breakLength: Infinity })
+    formatter.write(' ')
+    formatter.writeAttr(key, value)
+    return Formatter.width(formatter.buffer)
+  }
+
+  /**
+   * Print attrs, breaking lines when they no longer fit the remaining
+   * width. Returns whether any line was broken.
+   */
+  attrs(attrs: Record<string, unknown>): boolean {
     const entries = Object.entries(attrs)
     if (this.opts.sorted === true) {
       entries.sort()
@@ -111,16 +135,20 @@ export class Formatter {
       const compare = this.opts.sorted
       entries.sort(([a], [b]) => compare(a, b))
     }
+    if (entries.length === 0)
+      return false
+    const nested = this.nest()
+    const inline = entries.reduce<number>((width, [key, value]) => width + this.sizeAttr(key, value), 0)
+    const multiline = this.column + inline > this.opts.breakLength
     for (const [key, value] of entries) {
-      this.write(` ${this.style('attr', key)}`)
-      if (value === true)
-        continue
-      this.write('=')
-      if (typeof value === 'string')
-        this.string(value)
+      if (multiline)
+        nested.breakLines()
       else
-        this.object(value)
+        nested.write(' ')
+      nested.writeAttr(key, value)
     }
+    this.column = nested.column
+    return multiline
   }
 
   /**
@@ -149,7 +177,8 @@ export class Formatter {
       multiline = this.column + inline > this.opts.breakLength
     }
     for (const child of shown) {
-      if (multiline && (!nested.compact || !nested.isText(child)))
+      const flow = nested.compact ? nested.isText(child) : nested.isWhitespace(child)
+      if (multiline && !flow)
         nested.breakLines()
       nested.node(child)
     }
@@ -165,9 +194,14 @@ export class Formatter {
   element(element: ElementJSON): void {
     const tag = this.style('tag', element.type === Fragment ? '' : element.type)
     this.write(`<${tag}`)
-    this.attrs(element.attrs)
-    if (element.children.length === 0)
-      return this.write(this.compact ? '/>' : ' />')
+    const multiline = this.attrs(element.attrs)
+    if (element.children.length === 0) {
+      if (multiline)
+        this.breakLines()
+      return this.write(multiline || this.compact ? '/>' : ' />')
+    }
+    if (multiline)
+      this.breakLines()
     this.write('>')
     if (this.children(element.children))
       this.breakLines()
@@ -177,6 +211,11 @@ export class Formatter {
   /** Whether the node is rendered as plain text. */
   private isText(node: unknown): node is string {
     return !this.opts.wrapText && typeof node === 'string'
+  }
+
+  /** Whether the node is rendered as whitespace-only text. */
+  private isWhitespace(node: unknown): node is string {
+    return this.isText(node) && node.trim() === ''
   }
 
   text(value: string): void {
