@@ -80,9 +80,12 @@ export class Formatter {
   string(value: string): void {
     const json = JSON.stringify(value)
     const max = this.opts.maxStringLength
-    this.write(this.stylize(max != null && json.length > max
-      ? `${json.slice(0, max)}... ${json.length - max} more character${json.length - max > 1 ? 's' : ''}`
-      : json, 'string'))
+    if (max == null || json.length <= max) {
+      this.write(this.stylize(json, 'string'))
+      return
+    }
+    this.write(this.stylize(json.slice(0, max), 'string'))
+    this.write(`... ${json.length - max} more character${json.length - max > 1 ? 's' : ''}`)
   }
 
   inspect(object: unknown): string {
@@ -185,7 +188,7 @@ export class Formatter {
     if (rest > 0) {
       if (multiline)
         nested.breakLine()
-      nested.write(this.stylize(marker, 'more'))
+      nested.write(this.stylize(marker, 'special'))
     }
     this.column = nested.column
     return multiline
@@ -288,10 +291,10 @@ export namespace Formatter {
   }
 
   export const styles = {
+    special: 'cyan',
     string: 'green',
     attr: 'red',
-    tag: 'cyan',
-    more: 'dim',
+    tag: 'blue',
   } as const satisfies Record<string, InspectColor>
 }
 
