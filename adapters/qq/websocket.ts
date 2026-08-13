@@ -77,7 +77,7 @@ export class QQBotWS extends EventEmitter<QQ.DispatchEventMap & {
       seq: this.seq!,
     }))
     await new Promise(resolve => this.once('RESUMED', resolve))
-    logger.log('resumed')
+    logger.log('session resumed')
     this.canReconnect = true
   }
 
