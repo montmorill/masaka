@@ -30,7 +30,7 @@ declare module '@yarkjs/protocol' {
   }
 
   interface Quote {
-    'qq:msg_idx': QQ.RefMsgIdx
+    'qq:msg_idx'?: QQ.RefMsgIdx
   }
 }
 
@@ -125,11 +125,10 @@ export class QQAdapter extends EventEmitter<Universal.EventMap> {
         console.warn('unexpected msg_element.message_type', QQ.MessageType.toString(msg_element.message_type))
       if (msg_element.msg_elements)
         console.warn('unexpected msg_element.msg_elements', msg_element.msg_elements)
-      // TODO: parse message elements
       if (msg_element.attachments)
         console.warn('unexpected msg_element.attachments', msg_element.attachments)
       else if (msg_element.ark_data)
-        element.children.push(this.parseArkData(msg_element.ark_data))
+        element.children.push(this.parseArkData(msg_element.ark_data).update(msg_element.content))
       else if (msg_element.content)
         element.children.push(msg_element.content)
       else
@@ -151,6 +150,12 @@ export class QQAdapter extends EventEmitter<Universal.EventMap> {
       ...withPrefix('qq:', scene),
     }))
     let content: Fragment = message.content
+    if (message_type === QQ.MessageType.Quote) {
+      if (content[0] === ' ')
+        content = content.slice(1)
+      else
+        console.warn('expected message.content startswith " ", got', content)
+    }
     if (message_type === QQ.MessageType.Ark)
       content = this.parseArkData(message.ark_data).update(message.content)
     else if (message_type === QQ.MessageType.Parallel) // TODO: parallel
