@@ -158,7 +158,9 @@ export interface Member extends User {
 
 export enum MessageType {
   Text = 0,
+  Markdown = 2,
   Ark = 3,
+  Media = 7,
   Parallel = 101,
   Forward = 102,
   Quote = 103,
@@ -167,7 +169,9 @@ export enum MessageType {
 export namespace MessageType {
   export const stringMap = {
     [MessageType.Text]: 'text',
+    [MessageType.Markdown]: 'markdown',
     [MessageType.Ark]: 'ark',
+    [MessageType.Media]: 'media',
     [MessageType.Parallel]: 'parallel',
     [MessageType.Forward]: 'forward',
     [MessageType.Quote]: 'quote',
@@ -190,9 +194,9 @@ export interface MessageScene {
 
 export interface MessageAttachmentContentTypes {
   'voice': { voice_wav_url: string, asr_refer_text: string }
-  'image/jpeg': { width: number, height: number, content: '' | unknown }
-  'image/png': { width: number, height: number, content: '' | unknown }
-  'image/gif': { width: number, height: number, content: '' | unknown }
+  'image/jpeg': { width: number, height: number, content?: string }
+  'image/png': { width: number, height: number, content?: string }
+  'image/gif': { width: number, height: number, content?: string }
   'video/mp4': { width: number, height: number }
   'file': object
 }
