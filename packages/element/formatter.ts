@@ -245,23 +245,40 @@ export namespace Formatter {
   // eslint-disable-next-line prefer-regex-literals, no-control-regex
   const ansi = new RegExp('\\x1b\\[[0-9;]*m', 'g')
 
+  /**
+   * Characters that are rendered at double width in terminals: CJK
+   * characters of all planes, emoji, plus CJK punctuation and
+   * fullwidth forms which no Unicode property expresses on its own.
+   */
+  // eslint-disable-next-line regexp/no-dupe-characters-character-class -- the punctuation ranges intentionally overlap Script=Han for chars like 々〇
+  export const wide = /[\p{Script=Han}\p{Extended_Pictographic}\u1100-\u115F\u2E80-\uA4CF\uAC00-\uD7A3\uFE30-\uFE4F\uFF00-\uFF60\uFFE0-\uFFE6\u{1F1E6}-\u{1F1FF}]/u
+
   /** Whether a character is rendered at double width in terminals. */
   export function isWide(char: string): boolean {
-    const code = char.codePointAt(0)!
-    return (code >= 0x1100 && code <= 0x115F) // Hangul Jamo
-      || (code >= 0x2E80 && code <= 0xA4CF) // CJK Radicals, Kangxi Radicals, CJK Unified Ideographs
-      || (code >= 0xAC00 && code <= 0xD7A3) // Hangul Syllables
-      || (code >= 0xF900 && code <= 0xFAFF) // CJK Compatibility Ideographs
-      || (code >= 0xFE30 && code <= 0xFE4F) // CJK Compatibility Forms
-      || (code >= 0xFF00 && code <= 0xFF60) // Fullwidth Forms
-      || (code >= 0xFFE0 && code <= 0xFFE6) // Fullwidth Signs
+    return Formatter.wide.test(char)
   }
+
+  /**
+   * Characters that take up no space in terminals: combining marks,
+   * joiners, variation selectors and zero-width spaces.
+   */
+  export const zero = /[\p{M}\u200B-\u200F\uFEFF]/u
+
+  /** Grapheme cluster segmenter, so emoji sequences count as one glyph. */
+  const graphemes = new Intl.Segmenter(undefined, { granularity: 'grapheme' })
 
   /** Visible width of a string, ignoring ANSI escapes. */
   export function width(string: string): number {
     let width = 0
-    for (const char of string.replace(ansi, ''))
-      width += Formatter.isWide(char) ? 2 : 1
+    for (const { segment } of graphemes.segment(string.replace(ansi, ''))) {
+      const char = String.fromCodePoint(segment.codePointAt(0)!)
+      if (Formatter.zero.test(char))
+        continue
+      if (segment.includes(String.fromCharCode(0x20E3)))
+        width += 2
+      else
+        width += Formatter.isWide(char) ? 2 : 1
+    }
     return width
   }
 
