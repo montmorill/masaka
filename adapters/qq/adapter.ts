@@ -115,8 +115,27 @@ export class QQAdapter extends EventEmitter<Universal.EventMap> {
   }
 
   parseMsgElements(msg_elements: QQ.MsgElement[], ref_msg_idx: QQ.RefMsgIdx): Element<'quote'> {
-    return h.quote({ 'qq:msg_idx': ref_msg_idx }, ...msg_elements as unknown[] as Fragment[])
-    // TODO: parse message elements
+    const element = h.quote({ 'qq:msg_idx': ref_msg_idx })
+    for (const { ...msg_element } of msg_elements) {
+      if (msg_element.msg_idx !== ref_msg_idx)
+        console.warn('unmatched msg_element.msg_idx', msg_element.msg_idx, 'with ref_msg_idx', ref_msg_idx)
+      if (msg_element.author)
+        console.warn('unexpected msg_element.author', msg_element.author)
+      if (msg_element.message_type && msg_element.message_type !== QQ.MessageType.Quote)
+        console.warn('unexpected msg_element.message_type', QQ.MessageType.toString(msg_element.message_type))
+      if (msg_element.msg_elements)
+        console.warn('unexpected msg_element.msg_elements', msg_element.msg_elements)
+      // TODO: parse message elements
+      if (msg_element.attachments)
+        console.warn('unexpected msg_element.attachments', msg_element.attachments)
+      else if (msg_element.ark_data)
+        element.children.push(this.parseArkData(msg_element.ark_data))
+      else if (msg_element.content)
+        element.children.push(msg_element.content)
+      else
+        element.children.push(msg_element as unknown as Fragment)
+    }
+    return element
   }
 
   parseMessageContent({
