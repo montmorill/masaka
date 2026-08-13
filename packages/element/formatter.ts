@@ -39,14 +39,14 @@ export class Formatter {
    * Print a line break for text content: always breaks the line,
    * but only indents when the output is expanded.
    */
-  newline(): void {
+  newLine(): void {
     if (this.compact)
       return this.write('\n')
     this.write(`\n${'  '.repeat(this.depth)}`)
   }
 
   /** Break the current line, indented to the current depth. */
-  breakLines(): void {
+  breakLine(): void {
     this.write(`\n${'  '.repeat(this.depth)}`)
   }
 
@@ -54,7 +54,7 @@ export class Formatter {
     const lines = value.split('\n')
     this.write(lines.shift()!)
     for (const line of lines) {
-      this.newline()
+      this.newLine()
       this.write(line)
     }
   }
@@ -73,16 +73,16 @@ export class Formatter {
     return Formatter.width(formatter.buffer.split('\n')[0]!)
   }
 
-  style(type: keyof typeof Formatter.styles, data: any): string {
+  stylize(data: string, type: keyof typeof Formatter.styles): string {
     return this.opts.colors ? styleText(Formatter.styles[type], data) : data
   }
 
   string(value: string): void {
     const json = JSON.stringify(value)
     const max = this.opts.maxStringLength
-    this.write(this.style('string', max != null && json.length > max
+    this.write(this.stylize(max != null && json.length > max
       ? `${json.slice(0, max)}... ${json.length - max} more character${json.length - max > 1 ? 's' : ''}`
-      : json))
+      : json, 'string'))
   }
 
   inspect(object: unknown): string {
@@ -104,7 +104,7 @@ export class Formatter {
 
   /** Print a single attr. */
   private writeAttr(key: string, value: unknown): void {
-    this.write(this.style('attr', key))
+    this.write(this.stylize(key, 'attr'))
     if (value === true)
       return
     this.write('=')
@@ -142,7 +142,7 @@ export class Formatter {
     const multiline = this.column + inline > this.opts.breakLength
     for (const [key, value] of entries) {
       if (multiline)
-        nested.breakLines()
+        nested.breakLine()
       else
         nested.write(' ')
       nested.writeAttr(key, value)
@@ -179,32 +179,32 @@ export class Formatter {
     for (const child of shown) {
       const flow = nested.compact ? nested.isText(child) : nested.isWhitespace(child)
       if (multiline && !flow)
-        nested.breakLines()
+        nested.breakLine()
       nested.node(child)
     }
     if (rest > 0) {
       if (multiline)
-        nested.breakLines()
-      nested.write(this.style('more', marker))
+        nested.breakLine()
+      nested.write(this.stylize(marker, 'more'))
     }
     this.column = nested.column
     return multiline
   }
 
   element(element: ElementJSON): void {
-    const tag = this.style('tag', element.type === Fragment ? '' : element.type)
+    const tag = this.stylize(element.type === Fragment ? '' : element.type, 'tag')
     this.write(`<${tag}`)
     const multiline = this.attrs(element.attrs)
     if (element.children.length === 0) {
       if (multiline)
-        this.breakLines()
+        this.breakLine()
       return this.write(multiline || this.compact ? '/>' : ' />')
     }
     if (multiline)
-      this.breakLines()
+      this.breakLine()
     this.write('>')
     if (this.children(element.children))
-      this.breakLines()
+      this.breakLine()
     this.write(`</${tag}>`)
   }
 
@@ -264,15 +264,20 @@ export namespace Formatter {
    */
   export const zero = /[\p{M}\u200B-\u200F\uFEFF]/u
 
+  /** Whether a character takes up no space in terminals. */
+  export function isZero(char: string): boolean {
+    return Formatter.zero.test(char)
+  }
+
   /** Grapheme cluster segmenter, so emoji sequences count as one glyph. */
   const graphemes = new Intl.Segmenter(undefined, { granularity: 'grapheme' })
 
   /** Visible width of a string, ignoring ANSI escapes. */
-  export function width(string: string): number {
+  export function width(str: string): number {
     let width = 0
-    for (const { segment } of graphemes.segment(string.replace(ansi, ''))) {
+    for (const { segment } of graphemes.segment(str.replace(ansi, ''))) {
       const char = String.fromCodePoint(segment.codePointAt(0)!)
-      if (Formatter.zero.test(char))
+      if (Formatter.isZero(char))
         continue
       if (segment.includes(String.fromCharCode(0x20E3)))
         width += 2
