@@ -1,6 +1,7 @@
 import type { Element, Fragment } from '@yarkjs/element'
 import type * as Universal from '@yarkjs/protocol'
 import type QQBot from './bot'
+import { Buffer } from 'node:buffer'
 import EventEmitter from 'node:events'
 import h from '@yarkjs/element'
 import { logger } from '@yarkjs/logger'
@@ -15,10 +16,18 @@ export type Ark<T extends string = string, Data extends QQ.ArkData = QQ.ArkData<
 
 declare module '@yarkjs/element' {
   interface Elements {
-    ark: Ark
-    audio: {
+    'image': {
+      'qq:faceType'?: number
+    }
+    'audio': {
       'qq:voice_wav_url': string
       'qq:asr_refer_text': string
+    }
+    'qq:ark': Ark
+    'qq:face': {
+      type: number
+      id: string
+      text: string
     }
   }
 }
@@ -92,8 +101,8 @@ export class QQAdapter extends EventEmitter<Universal.EventMap> {
     }))
   }
 
-  parseArkData({ prompt, ark_type: type, ark_name: name, fields }: QQ.ArkData): Element<'ark'> {
-    return h.ark({ prompt, type, name, ...fields })
+  parseArkData({ prompt, ark_type: type, ark_name: name, fields }: QQ.ArkData): Element<'qq:ark'> {
+    return h['qq:ark']({ prompt, type, name, ...fields })
   }
 
   parseForwardContent(content: string): Element<'message'>[] {
@@ -200,9 +209,26 @@ export class QQAdapter extends EventEmitter<Universal.EventMap> {
       content = this.parseMentions(message.content, message.mentions)
     if (message_type === QQ.MessageType.Quote)
       element.children.push(this.parseMsgElements(message.msg_elements, ref_msg_idx as QQ.RefMsgIdx))
-    if (message.attachments)
-      element.children.push(...this.parseAttachments(message.attachments))
-    element.children.push(...h.unpack(content))
+    const attachments = message.attachments ? this.parseAttachments(message.attachments) : []
+    content = h.pack(h.transform.replace(
+      /<faceType=(\d+),faceId="(\d+)",ext="([A-Za-z0-9+/]+={0,2})">/,
+      (_, faceType, faceId, bExt) => {
+        const [type, id] = [+faceType, +faceId]
+        const ext = JSON.parse(Buffer.from(bExt, 'base64').toString('utf-8'))
+        const attachment = attachments[id] as Element<'image'>
+        if (!attachment || attachment.type !== 'image')
+          return h['qq:face']({ type, id: faceId, ...ext })
+        // @ts-ignore
+        attachment[id] = null
+        if (attachment.children.length === 1 && (attachment.children[0] ?? '') === ext.text)
+          delete ext.text
+        else
+          logger.warn('unmatched ext.text', ext.text, 'with attachment.content', attachment.children)
+        ext.faceType = faceType
+        return attachment.update(withPrefix('qq:', ext))
+      },
+    )(content))
+    element.update(...h.unpack(content), ...attachments)
     return element
   }
 
