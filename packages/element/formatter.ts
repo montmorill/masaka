@@ -24,7 +24,7 @@ export class Formatter {
     readonly print: (str: string) => void,
     opts: FormatOptions = {},
   ) {
-    this.opts = Object.assign({}, Formatter.defaultOptions, opts)
+    this.opts = { ...Formatter.defaultOptions, ...opts }
   }
 
   /** Print a chunk of output, keeping track of the current column. */
