@@ -85,8 +85,8 @@ export class Formatter {
       this.write(this.stylize(json, 'string'))
       return
     }
-    this.write(this.stylize(json.slice(0, max), 'string'))
-    this.write(`... ${json.length - max} more character${json.length - max > 1 ? 's' : ''}`)
+    const rest = json.length - max
+    this.write(this.stylize(`${json.slice(0, max)}... ${rest} more character${rest > 1 ? 's' : ''}"`, 'string'))
   }
 
   highlight(object: unknown): string {
