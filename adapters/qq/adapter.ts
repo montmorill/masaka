@@ -219,15 +219,15 @@ export class QQAdapter extends EventEmitter<Universal.EventMap> {
         if (!attachment || attachment.type !== 'image')
           return h['qq:face']({ type, id: faceId, ...ext }, `[${ext.text}]`)
         // @ts-ignore
-        attachment[id] = null
-        if (attachment.children.length === 1 && (attachment.children[0] ?? '') === ext.text)
+        attachments[id] = null
+        if (attachment.children.length <= 1 && (attachment.children[0] ?? '') === ext.text)
           delete ext.text
         else
           logger.warn('unmatched ext.text', ext.text, 'with attachment.content', attachment.children)
         return attachment.update(withPrefix('qq:', { faceType, ...ext }))
       },
     )(content))
-    element.update(content, ...attachments)
+    element.update(...h.unpack(content), ...attachments)
     return element
   }
 

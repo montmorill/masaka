@@ -1,7 +1,7 @@
 /* eslint-disable antfu/no-top-level-await */
 
 import { env } from 'node:process'
-import { inspect } from 'node:util'
+import { Formatter } from '@yarkjs/element/formatter'
 import { logger } from '@yarkjs/logger'
 import { noop } from '@yarkjs/utils'
 import { QQAdapter } from './adapter'
@@ -10,7 +10,8 @@ import * as QQ from './common'
 import { QQBotServer } from './webhook'
 import { QQBotWS } from './websocket'
 
-inspect.defaultOptions.compact = false
+Formatter.defaultOptions.compact = false
+Formatter.defaultOptions.wrapText = true
 
 logger.debug = noop
 
