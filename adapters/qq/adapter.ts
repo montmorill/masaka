@@ -38,7 +38,7 @@ declare module '@yarkjs/protocol' {
   }
 
   interface Message {
-    'qq:type'?: QQ.MessageType.StringTag
+    'qq:message_type'?: QQ.MessageType
     'qq:msg_idx'?: QQ.MsgIdx
   }
 
@@ -187,7 +187,7 @@ export class QQAdapter extends EventEmitter<Universal.EventMap> {
     const element = h.message({
       'id': message.id,
       'timestamp': new Date(message.timestamp).valueOf(),
-      'qq:type': QQ.MessageType.toString(message_type),
+      'qq:message_type': message_type,
       ...withPrefix('qq:', scene),
     })
     let content: Fragment = message.content
