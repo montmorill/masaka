@@ -17,7 +17,7 @@ export type MaybeFragment = Fragment | false | null | undefined
 
 export type ElementType<T extends keyof JSXElements> =
   T extends keyof Elements
-    ? Elements[T] extends (attrs: object, ...args: Fragment[]) => Element
+    ? Elements[T] extends (...args: any[]) => Element
       ? ReturnType<Elements[T]> extends Element<infer T> ? T : never
       : T
     : T
@@ -34,7 +34,7 @@ export type PartialElementInit<T extends keyof JSXElements = keyof JSXElements> 
 
 export type JSXElements = Merge<ElementProps, {
   [T in keyof Elements]: Pretty<Xor<
-    Elements[T] extends (attrs: object, ...args: Fragment[]) => Element
+    Elements[T] extends (...args: any[]) => Element
       ? Parameters<Overloads<Elements[T]>> extends [infer F, ...infer R]
         ? F extends Fragment ? object : [] extends R ? F : F
         : Elements[T]
@@ -43,9 +43,7 @@ export type JSXElements = Merge<ElementProps, {
 }>
 
 type JSXElementsWithChildren = {
-  [T in keyof JSXElements]: JSXElements[T] & {
-    children?: Fragment | Fragment[]
-  }
+  [T in keyof JSXElements]: JSXElements[T] & { children?: Fragment | Fragment[] }
 }
 
 declare global {
