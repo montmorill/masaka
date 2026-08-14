@@ -194,9 +194,9 @@ export interface MessageScene {
 
 export interface MessageAttachmentContentTypes {
   'voice': { voice_wav_url: string, asr_refer_text: string }
-  'image/jpeg': { width: number, height: number, content?: string }
-  'image/png': { width: number, height: number, content?: string }
-  'image/gif': { width: number, height: number, content?: string }
+  'image/jpeg': { width: number, height: number, content: string }
+  'image/png': { width: number, height: number, content: string }
+  'image/gif': { width: number, height: number, content: string }
   'video/mp4': { width: number, height: number }
   'file': object
 }

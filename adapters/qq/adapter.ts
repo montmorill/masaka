@@ -118,25 +118,30 @@ export class QQAdapter extends EventEmitter<Universal.EventMap> {
     )))
   }
 
-  parseImageAttachment(attrs: Element<'image'>['attrs'], { width, height, content, ...attachment }:
-  QQ.MessageAttachmentContentTypes['image/jpeg' | 'image/png' | 'image/gif']): Element<'image'> {
+  parseImageAttachment(attrs: Element<'image'>['attrs'], {
+    width,
+    height,
+    content,
+    ...attachment
+  }: { width: number, height: number, content: string }): Element<'image'> {
     return h.image(Object.assign(attrs, { width, height }, withPrefix('qq:', attachment)), content)
   }
 
   parseAttachments(attachments: QQ.MessageAttachment[]): Element<'file' | 'audio' | 'image' | 'video'>[] {
     const elements = []
     for (const { url, filename, size, ...attachment } of attachments) {
-      const attrs = { src: url, title: filename, size, type: attachment.content_type }
+      const attrs = { src: url, title: filename, size }
       if (attachment.content_type === 'file')
-        elements.push(h.file(Object.assign(attrs)))
+        elements.push(h.file(Object.assign(attrs, withPrefix('qq:', attachment))))
       else if (attachment.content_type === 'voice')
-        elements.push(h.audio(Object.assign(attrs)))
+        elements.push(h.audio(Object.assign(attrs, withPrefix('qq:', attachment))))
       else if (attachment.content_type === 'video/mp4')
-        elements.push(h.video(Object.assign(attrs, attachment)))
+        elements.push(h.video(Object.assign(attrs, withPrefix('qq:', attachment))))
       else if (attachment.content_type.startsWith('image/'))
         elements.push(this.parseImageAttachment(attrs, attachment))
       else
         console.warn('unknown attachment', attachments[elements.length])
+      delete (attachment as any).content_type
     }
     return elements
   }
