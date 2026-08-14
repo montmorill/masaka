@@ -40,6 +40,7 @@ declare module '@yarkjs/protocol' {
   interface Message {
     'qq:message_type'?: QQ.MessageType
     'qq:msg_idx'?: QQ.MsgIdx
+    'qq:auth_token'?: string
   }
 
   interface Quote {
@@ -105,8 +106,9 @@ export class QQAdapter extends EventEmitter<Universal.EventMap> {
     return h['qq:ark']({ prompt, type, name, ...fields })
   }
 
-  parseForwardContent(content: string): Element<'message'>[] {
-    return [h.message(content)] // TODO: parse forward content
+  parseForwardContent(content: string): Element<'forward'> {
+    const forward = h.forward(content)
+    return forward
   }
 
   parseMentions(content: string, mentions: NonNullable<QQ.GroupMessage['mentions']>): Fragment {
@@ -202,7 +204,7 @@ export class QQAdapter extends EventEmitter<Universal.EventMap> {
     else if (message_type === QQ.MessageType.Parallel) // TODO: parallel
       console.warn('unknown message type', message_type, message)
     else if (message_type === QQ.MessageType.Forward)
-      content = h.pack(this.parseForwardContent(message.content))
+      content = this.parseForwardContent(message.content)
     else if (message_type !== QQ.MessageType.Text && message_type !== QQ.MessageType.Quote)
       console.warn('unknown message type', message_type, message)
     if (message.mentions)

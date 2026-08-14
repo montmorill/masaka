@@ -18,6 +18,7 @@ declare module '@yarkjs/element' {
     file: { src: string, title?: string, size?: number }
     message: Message
     quote: Quote
+    forward: Forward
     author: User | Member
   }
 }
@@ -31,6 +32,8 @@ export interface Quote {
   id?: string
   timestamp?: number
 }
+
+export interface Forward {}
 
 export interface User {
   id: string
