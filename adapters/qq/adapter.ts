@@ -133,7 +133,7 @@ export class QQAdapter extends EventEmitter<Universal.EventMap> {
     content,
     ...attachment
   }: { width: number, height: number, content: string }): Element<'image'> {
-    return h.image(Object.assign(attrs, { width, height }, withPrefix('qq:', attachment)), content)
+    return h.image({ ...attrs, width, height, ...withPrefix('qq:', attachment) }, content)
   }
 
   parseAttachments(attachments: QQ.MessageAttachment[]): Element<'file' | 'audio' | 'image' | 'video'>[] {
@@ -141,11 +141,11 @@ export class QQAdapter extends EventEmitter<Universal.EventMap> {
     for (const { url, filename, size, ...attachment } of attachments) {
       const attrs = { src: url, title: filename, size }
       if (attachment.content_type === 'file')
-        elements.push(h.file(Object.assign(attrs, withPrefix('qq:', attachment))))
+        elements.push(h.file({ ...attrs, ...withPrefix('qq:', attachment) }))
       else if (attachment.content_type === 'voice')
-        elements.push(h.audio(Object.assign(attrs, withPrefix('qq:', attachment))))
+        elements.push(h.audio({ ...attrs, ...withPrefix('qq:', attachment) }))
       else if (attachment.content_type === 'video/mp4')
-        elements.push(h.video(Object.assign(attrs, withPrefix('qq:', attachment))))
+        elements.push(h.video({ ...attrs, ...withPrefix('qq:', attachment) }))
       else if (attachment.content_type.startsWith('image/'))
         elements.push(this.parseImageAttachment(attrs, attachment))
       else
@@ -184,12 +184,12 @@ export class QQAdapter extends EventEmitter<Universal.EventMap> {
     ...message
   }: Omit<QQ.Message & Partial<QQ.GroupMessage>, 'author'>): Element<'message'> {
     const { ref_msg_idx, ...scene } = this.parseMessageScene(message_scene)
-    const element = h.message(Object.assign({
+    const element = h.message({
       'id': message.id,
       'timestamp': new Date(message.timestamp).valueOf(),
       'qq:type': QQ.MessageType.toString(message_type),
       ...withPrefix('qq:', scene),
-    }))
+    })
     let content: Fragment = message.content
     if (message_type === QQ.MessageType.Quote) {
       if (content[0] === ' ')
@@ -224,8 +224,7 @@ export class QQAdapter extends EventEmitter<Universal.EventMap> {
           delete ext.text
         else
           logger.warn('unmatched ext.text', ext.text, 'with attachment.content', attachment.children)
-        ext.faceType = faceType
-        return attachment.update(withPrefix('qq:', ext))
+        return attachment.update(withPrefix('qq:', { faceType, ...ext }))
       },
     )(content))
     element.update(...h.unpack(content), ...attachments)
