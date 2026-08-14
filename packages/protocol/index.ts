@@ -19,7 +19,7 @@ declare module '@yarkjs/element' {
     message: Message
     quote: Quote
     forward: Forward
-    author: User | Member
+    author: Partial<User | Member>
   }
 }
 
