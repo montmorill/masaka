@@ -211,13 +211,13 @@ export class QQAdapter extends EventEmitter<Universal.EventMap> {
       element.children.push(this.parseMsgElements(message.msg_elements, ref_msg_idx as QQ.RefMsgIdx))
     const attachments = message.attachments ? this.parseAttachments(message.attachments) : []
     content = h.pack(h.transform.replace(
-      /<faceType=(\d+),faceId="(\d+)",ext="([A-Za-z0-9+/]+={0,2})">/,
+      /<faceType=(\d+),faceId="(\d+)",ext="([A-Za-z0-9+/]+={0,2})">/g,
       (_, faceType, faceId, bExt) => {
         const [type, id] = [+faceType, +faceId]
         const ext = JSON.parse(Buffer.from(bExt, 'base64').toString('utf-8'))
         const attachment = attachments[id] as Element<'image'>
         if (!attachment || attachment.type !== 'image')
-          return h['qq:face']({ type, id: faceId, ...ext })
+          return h['qq:face']({ type, id: faceId, ...ext }, `[${ext.text}]`)
         // @ts-ignore
         attachment[id] = null
         if (attachment.children.length === 1 && (attachment.children[0] ?? '') === ext.text)
@@ -227,7 +227,7 @@ export class QQAdapter extends EventEmitter<Universal.EventMap> {
         return attachment.update(withPrefix('qq:', { faceType, ...ext }))
       },
     )(content))
-    element.update(...h.unpack(content), ...attachments)
+    element.update(content, ...attachments)
     return element
   }
 
