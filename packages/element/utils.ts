@@ -44,7 +44,7 @@ transform.text = (text: TextVisitor): Transformer => transform({ text })
 export function* replace(
   content: string,
   pattern: string | RegExp,
-  replacer: Fragment | ((substring: string, ...args: any[]) => Fragment),
+  replacer: Fragment | ((...args: string[]) => Fragment),
 ): Generator<Fragment> {
   if (typeof pattern === 'string')
     pattern = new RegExp(RegExp.escape(pattern))
@@ -57,7 +57,7 @@ export function* replace(
       const index = match.index
       if (index > 0)
         yield content.substring(0, index)
-      yield replacer(match[0], ...match.slice(1), index, content)
+      yield replacer(match[0], ...match.slice(1))
       const after = index + match[0].length
       if (after < content.length)
         yield content.substring(after)
@@ -77,7 +77,7 @@ export function* replace(
     const index = match.index
     if (index > lastIndex)
       yield content.substring(lastIndex, index)
-    yield replacer(match[0], ...match.slice(1), index, content)
+    yield replacer(match[0], ...match.slice(1))
     lastIndex = index + matched.length
     if (matched.length === 0 && pattern.lastIndex === index)
       pattern.lastIndex++
@@ -88,7 +88,7 @@ export function* replace(
 
 transform.replace = (
   pattern: string | RegExp,
-  replacer: Fragment | ((substring: string, ...args: any[]) => Fragment),
+  replacer: Fragment | ((...args: string[]) => Fragment),
 ): Transformer => {
   if (typeof pattern === 'string')
     pattern = new RegExp(RegExp.escape(pattern))
