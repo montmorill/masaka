@@ -1,5 +1,7 @@
 import type * as QQ from './common'
-import { logger } from '@yarkjs/logger'
+import { createLogger } from '@yarkjs/logger'
+
+const logger = createLogger('qq')
 
 const GATEWAY_URL = 'wss://api.sgroup.qq.com/websocket'
 

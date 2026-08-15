@@ -5,8 +5,10 @@ import { webcrypto } from 'node:crypto'
 import EventEmitter from 'node:events'
 import { Server } from 'node:http'
 import { buffer } from 'node:stream/consumers'
-import { logger } from '@yarkjs/logger'
+import { createLogger } from '@yarkjs/logger'
 import * as QQ from './common'
+
+const logger = createLogger('qq')
 
 const ED25519_SEED_SIZE = 32
 const ED25519_PKCS8_HEADER = Buffer.from('302e020100300506032b657004220420', 'hex')

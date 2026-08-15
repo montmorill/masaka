@@ -1,7 +1,9 @@
 import type { Element, ElementAttrs, Fragment } from '@yarkjs/element'
 import { Buffer } from 'node:buffer'
-import { logger } from '@yarkjs/logger'
+import { createLogger } from '@yarkjs/logger'
 import * as QQ from './common'
+
+const logger = createLogger('qq')
 
 interface ForwardItemParts {
   author?: Element<'author'>

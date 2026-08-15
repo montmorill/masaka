@@ -3,10 +3,12 @@ import type * as Universal from '@yarkjs/protocol'
 import type QQBot from './bot'
 import EventEmitter from 'node:events'
 import h from '@yarkjs/element'
-import { logger } from '@yarkjs/logger'
+import { createLogger } from '@yarkjs/logger'
 import { withPrefix } from '@yarkjs/utils'
 import * as QQ from './common'
 import { parseForwardContent, transformAttachment } from './forward'
+
+const logger = createLogger('qq')
 
 export type Ark<T extends string = string, Data extends QQ.ArkData = QQ.ArkData<T>> = {
   /** 卡片消息中的用户操作提示文本 */ prompt: Data['prompt']

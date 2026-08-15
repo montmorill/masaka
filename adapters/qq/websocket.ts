@@ -1,7 +1,9 @@
 import type QQBot from './bot'
 import { EventEmitter } from 'node:events'
-import { logger } from '@yarkjs/logger'
+import { createLogger } from '@yarkjs/logger'
 import * as QQ from './common'
+
+const logger = createLogger('qq')
 
 export class QQBotWS extends EventEmitter<QQ.DispatchEventMap & {
   HELLO: [interval: number]
@@ -30,7 +32,7 @@ export class QQBotWS extends EventEmitter<QQ.DispatchEventMap & {
   protected setup(hello: () => void): void {
     this.inner.onmessage = event => this.onmessage(event)
     this.inner.onclose = () => {
-      logger.log('connection closed')
+      logger.debug('connection closed')
       this.reconnect()
     }
     this.once('HELLO', (interval) => {
@@ -68,7 +70,7 @@ export class QQBotWS extends EventEmitter<QQ.DispatchEventMap & {
     this.canReconnect = false
     this.inner.close()
     clearTimeout(this.heartbeatTimeout)
-    logger.log('reconnecting...')
+    logger.debug('reconnecting...')
     const gateway = await this.bot.gateway()
     this.inner = new WebSocket(gateway.url)
     this.setup(() => this.send(QQ.OpCode.Resume, {
@@ -77,7 +79,7 @@ export class QQBotWS extends EventEmitter<QQ.DispatchEventMap & {
       seq: this.seq!,
     }))
     await new Promise(resolve => this.once('RESUMED', resolve))
-    logger.log('session resumed')
+    logger.debug('session resumed')
     this.canReconnect = true
   }
 
@@ -95,7 +97,7 @@ export class QQBotWS extends EventEmitter<QQ.DispatchEventMap & {
       /* eslint-disable style/max-statements-per-line */
       case QQ.OpCode.Dispatch: this.emit(payload.t, payload.d, payload.id as any); break
       case QQ.OpCode.Heartbeat: this.send(QQ.OpCode.HeartbeatAck); break
-      case QQ.OpCode.Reconnect: logger.log('server request reconnect'); this.reconnect(); break
+      case QQ.OpCode.Reconnect: logger.debug('server request reconnect'); this.reconnect(); break
       case QQ.OpCode.InvalidSession: this.canReconnect = false; throw new Error('invalid session')
       case QQ.OpCode.Hello: this.emit('HELLO', payload.d.heartbeat_interval); break
       case QQ.OpCode.HeartbeatAck: break

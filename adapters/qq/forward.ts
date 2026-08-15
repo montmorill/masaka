@@ -1,10 +1,12 @@
 import type { Element, ElementAttrs, Fragment } from '@yarkjs/element'
 import { Buffer } from 'node:buffer'
 import h from '@yarkjs/element'
-import { logger } from '@yarkjs/logger'
+import { createLogger } from '@yarkjs/logger'
 import { withPrefix } from '@yarkjs/utils'
 import * as QQ from './common'
 import { formatForwardItem } from './formatter'
+
+const logger = createLogger('qq')
 
 interface ForwardAttachment {
   type: string

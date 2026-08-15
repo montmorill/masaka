@@ -2,13 +2,15 @@
 
 import { env } from 'node:process'
 import { Formatter } from '@yarkjs/element/formatter'
-import { logger } from '@yarkjs/logger'
+import { createLogger } from '@yarkjs/logger'
 import { noop } from '@yarkjs/utils'
 import { QQAdapter } from './adapter'
 import QQBot from './bot'
 import * as QQ from './common'
 import { QQBotServer } from './webhook'
 import { QQBotWS } from './websocket'
+
+const logger = createLogger('qq')
 
 Formatter.defaultOptions.compact = false
 Formatter.defaultOptions.wrapText = true
