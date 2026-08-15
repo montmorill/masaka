@@ -4,9 +4,12 @@ import { inspect, styleText } from 'node:util'
 import { Element, Fragment } from './jsx-runtime'
 
 export interface FormatOptions extends InspectOptions {
-  wrapText?: boolean
+  /** Maximum number of characters of attr string values, defaults to `maxStringLength`. */
+  maxAttrStringLength?: number
+  /** Whether text children are rendered as quoted strings instead of raw text. */
+  quoteText?: boolean
   /** Optional syntax highlighter used for objects when colors are enabled. */
-  highlight?: (code: string) => string
+  highlight?: ((code: string) => string) | null
 }
 
 export class Formatter {
@@ -78,9 +81,8 @@ export class Formatter {
     return this.opts.colors ? styleText(Formatter.styles[type], data) : data
   }
 
-  string(value: string): void {
+  string(value: string, max = this.opts.maxStringLength): void {
     const json = JSON.stringify(value)
-    const max = this.opts.maxStringLength
     if (max == null || json.length <= max) {
       this.write(this.stylize(json, 'string'))
       return
@@ -116,7 +118,7 @@ export class Formatter {
       return
     this.write('=')
     if (typeof value === 'string')
-      this.string(value)
+      this.string(value, this.opts.maxAttrStringLength ?? this.opts.maxStringLength)
     else
       this.object(value)
   }
@@ -217,7 +219,7 @@ export class Formatter {
 
   /** Whether the node is rendered as plain text. */
   private isText(node: unknown): node is string {
-    return !this.opts.wrapText && typeof node === 'string'
+    return !this.opts.quoteText && typeof node === 'string'
   }
 
   /** Whether the node is rendered as whitespace-only text. */
@@ -242,9 +244,11 @@ export class Formatter {
 }
 
 export namespace Formatter {
-  export const defaultOptions: Required<InspectOptions> & FormatOptions = {
+  export const defaultOptions: Required<InspectOptions & FormatOptions> = {
     ...inspect.defaultOptions as Required<InspectOptions>,
-    wrapText: false,
+    quoteText: false,
+    maxAttrStringLength: 80,
+    highlight: null,
   }
 
   /** Matches the ANSI escape sequences produced by styleText. */

@@ -13,7 +13,8 @@ import { QQBotWS } from './websocket'
 const logger = createLogger('qq')
 
 Formatter.defaultOptions.compact = false
-Formatter.defaultOptions.wrapText = true
+Formatter.defaultOptions.quoteText = true
+Formatter.defaultOptions.maxAttrStringLength = 80
 
 logger.debug = noop
 
