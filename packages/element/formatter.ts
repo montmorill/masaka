@@ -86,7 +86,14 @@ export class Formatter {
       return
     }
     const rest = json.length - max
-    this.write(this.stylize(`${json.slice(0, max)}... ${rest} more character${rest > 1 ? 's' : ''}"`, 'string'))
+    const marker = `... ${rest} more character${rest > 1 ? 's' : ''}`
+    if (marker.length >= rest) {
+      // the marker would not save any space
+      this.write(this.stylize(json, 'string'))
+      return
+    }
+    this.write(this.stylize(`${json.slice(0, max)}"`, 'string'))
+    this.write(this.stylize(marker, 'special'))
   }
 
   highlight(object: unknown): string {

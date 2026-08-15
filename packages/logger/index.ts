@@ -1,8 +1,21 @@
-import type { Logger } from 'reggol'
+import type { Logger, Message } from 'reggol'
+import { inspect } from 'node:util'
 import { Exporter, Factory } from 'reggol'
 
+/** reggol's console exporter without the continuation-line indentation. */
+class PlainConsole extends Exporter.Console {
+  override render(message: Message): string {
+    const output = super.render(message)
+    const indent = 3 + (this.label?.margin ?? 1) + (this.showTime ? this.showTime.length : 0)
+    return output.split(`\n${' '.repeat(indent)}`).join('\n')
+  }
+}
+
 const factory = new Factory()
-factory.addExporter(new Exporter.Console())
+factory.addExporter(new PlainConsole())
+// reggol's `%o` formatter forces `compact: true`, which inlines element trees
+factory.formatters.o = (value: unknown, exporter: Exporter): string =>
+  inspect(value, { colors: !!exporter.colors, depth: Infinity, compact: false, maxStringLength: 32 })
 
 const loggerMap = new Map<string, Logger>()
 
