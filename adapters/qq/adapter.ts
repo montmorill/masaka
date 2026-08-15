@@ -282,18 +282,7 @@ function buildForwardAttachment({
   return h.file(attrs)
 }
 
-function buildForwardItem(item: ForwardItem): Element<'message'> {
-  const attrs: Partial<ElementAttrs<'message'>> = {}
-  if (item.type) {
-    if (item.type === '卡片消息')
-      attrs['qq:message_type'] = QQ.MessageType.Ark
-    else if (item.type === '合并转发消息')
-      attrs['qq:message_type'] = QQ.MessageType.Forward
-    else if (item.type === '引用消息')
-      attrs['qq:message_type'] = QQ.MessageType.Quote
-    else
-      console.warn('unknown forward message type', item.type)
-  }
+function buildForwardItem(item: ForwardItem): Element<'message' | 'quote'> {
   const children: Fragment[] = []
   if (item.author)
     children.push(h.author({ name: item.author }))
@@ -333,7 +322,7 @@ function buildForwardItem(item: ForwardItem): Element<'message'> {
           else {
             logger.warn('unmatched ext.text', ext.text, 'with attachment.content', attachment.children)
           }
-          return attachment.update(withPrefix('qq:', { faceType, ...ext }))
+          return attachment.update(withPrefix('qq:', { faceType: +faceType, ...ext }))
         }
         const ext = JSON.parse(Buffer.from(description, 'base64').toString('utf-8'))
         const attachment = attachments[+attachmentIndex] as Element<'image'>
@@ -348,27 +337,29 @@ function buildForwardItem(item: ForwardItem): Element<'message'> {
       },
     )(item.content))
   }
+  // related quoted items are inlined as <quote> elements before the content;
+  // other related items are nested in a <forward> element after the attachments
+  const related = item.forward
+  const quotes = related && related.every(nested => nested.type === '引用消息')
+    ? related.map(buildForwardItem)
+    : []
+  const forward = related && related.length && !quotes.length
+    ? h.forward(...related.map(buildForwardItem))
+    : null
   if (item.type === '引用消息') {
-    // the whole item is a quote: its content belongs inside the <quote> element
-    const quote = h.quote(...content)
-    for (const attachment of attachments) {
-      if (attachment)
-        quote.update(attachment)
-    }
-    if (item.forward?.length)
-      quote.update(h.forward(...item.forward.map(buildForwardItem)))
-    children.push(quote)
+    // a quoted item is just the <quote> element itself
+    return h.quote(...children, ...quotes, ...content, ...attachments, forward)
   }
-  else {
-    children.push(...content)
-    for (const attachment of attachments) {
-      if (attachment)
-        children.push(attachment)
-    }
-    if (item.forward?.length)
-      children.push(h.forward(...item.forward.map(buildForwardItem)))
+  const attrs: Partial<ElementAttrs<'message'>> = {}
+  if (item.type) {
+    if (item.type === '卡片消息')
+      attrs['qq:message_type'] = QQ.MessageType.Ark
+    else if (item.type === '合并转发消息')
+      attrs['qq:message_type'] = QQ.MessageType.Forward
+    else
+      console.warn('unknown forward message type', item.type)
   }
-  return h.message(attrs, ...children)
+  return h.message(attrs, ...children, ...quotes, ...content, ...attachments, forward)
 }
 
 export class QQAdapter extends EventEmitter<Universal.EventMap> {
@@ -561,7 +552,7 @@ export class QQAdapter extends EventEmitter<Universal.EventMap> {
           delete ext.text
         else
           logger.warn('unmatched ext.text', ext.text, 'with attachment.content', attachment.children)
-        return attachment.update(withPrefix('qq:', { faceType, ...ext }))
+        return attachment.update(withPrefix('qq:', { faceType: type, ...ext }))
       },
     )(content))
     element.update(...h.unpack(content), ...attachments)
