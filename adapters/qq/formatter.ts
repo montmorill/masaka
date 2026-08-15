@@ -153,8 +153,10 @@ function pushForwardBlock(lines: string[], indent: string, text: string): void {
 }
 
 /** Append the item fields, indented, in the original parse order. */
-function appendForwardItem(lines: string[], item: Element<'message' | 'quote'>, indent: string): void {
-  const { author, quotes, content, attachments, card, related } = splitForwardItem(item)
+function appendForwardItem(lines: string[], item: Element<'message' | 'quote' | 'forward'>, indent: string): void {
+  if (item.type === 'forward')
+    return appendForwardRecord(lines, item as Element<'forward'>, indent)
+  const { author, quotes, content, attachments, card, related } = splitForwardItem(item as Element<'message' | 'quote'>)
   const text = card ? card.children.join('') : serializeForwardContent(content)
   if (text)
     pushForwardBlock(lines, indent, `[消息内容] ${text}`)
@@ -191,11 +193,46 @@ function appendForwardItem(lines: string[], item: Element<'message' | 'quote'>, 
   }
 }
 
+/** Format a forward record back to a 合并转发消息 item. */
+function appendForwardRecord(lines: string[], forward: Element<'forward'>, indent: string): void {
+  const items: Element<'message' | 'quote'>[] = []
+  let author: Element<'author'> | undefined
+  const attachments: Element<'file' | 'audio' | 'image' | 'video'>[] = []
+  for (const child of forward.children) {
+    if (typeof child === 'string')
+      continue
+    if (child.type === 'author') {
+      author = child as Element<'author'>
+    }
+    else if (child.type === 'image' || child.type === 'video' || child.type === 'file' || child.type === 'audio') {
+      attachments.push(child as Element<'file' | 'audio' | 'image' | 'video'>)
+    }
+    else {
+      items.push(child as Element<'message' | 'quote'>)
+    }
+  }
+  const title = forward.attrs['qq:title']
+  if (title)
+    pushForwardBlock(lines, indent, `[消息内容] ${title}`)
+  if (author)
+    lines.push(`${indent}[发送者] ${author.attrs.name}`)
+  for (let index = 0; index < attachments.length; index++)
+    lines.push(`${indent}[附件${index + 1}] ${formatForwardAttachment(attachments[index]!)}`)
+  lines.push(`${indent}[消息类型] 合并转发消息`)
+  if (items.length) {
+    lines.push(`${indent}[关联消息]`)
+    for (let index = 0; index < items.length; index++) {
+      lines.push(`${indent}--- 第${index + 1}条 ---`)
+      appendForwardItem(lines, items[index]!, `${indent}    `)
+    }
+  }
+}
+
 /**
  * Format a single forward item back to its dedented field lines,
  * the inverse of one `parseForwardItem` pass.
  */
-export function formatForwardItem(item: Element<'message' | 'quote'>): string {
+export function formatForwardItem(item: Element<'message' | 'quote' | 'forward'>): string {
   const lines: string[] = []
   appendForwardItem(lines, item, '')
   return lines.join('\n')
@@ -213,7 +250,7 @@ export function formatForwardContent(forward: Element<'forward'>): string {
   const items = forward.children
   for (let index = 0; index < items.length; index++) {
     lines.push(`=== 消息 ${index + 1} ===`)
-    appendForwardItem(lines, items[index] as Element<'message' | 'quote'>, '')
+    appendForwardItem(lines, items[index] as Element<'message' | 'quote' | 'forward'>, '')
     if (index + 1 < items.length)
       lines.push('')
   }

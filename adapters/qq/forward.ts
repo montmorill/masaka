@@ -273,7 +273,7 @@ export function transformAttachment(
   return attachment.update(withPrefix('qq:', { faceType: type, ...ext }))
 }
 
-function buildForwardItem(item: ForwardItem): Element<'message' | 'quote'> {
+function buildForwardItem(item: ForwardItem): Element<'message' | 'quote' | 'forward'> {
   const children: Fragment[] = []
   if (item.author)
     children.push(h.author({ name: item.author }))
@@ -320,21 +320,23 @@ function buildForwardItem(item: ForwardItem): Element<'message' | 'quote'> {
   const forward = related && related.length && !quotes.length
     ? h.forward(...related.map(buildForwardItem))
     : null
-  let element: Element<'message' | 'quote'>
+  let element: Element<'message' | 'quote' | 'forward'>
   if (item.type === '引用消息') {
     // a quoted item is just the <quote> element itself
     element = h.quote(...children, ...quotes, ...content, ...attachments, forward)
   }
+  else if (item.type === '合并转发消息') {
+    // a nested forward record is the <forward> element itself, with the
+    // content text as its title and the related items as its children
+    const attrs = item.content ? { 'qq:title': item.content } : {}
+    element = h.forward(attrs, ...children, ...attachments, ...(related ?? []).map(buildForwardItem))
+  }
   else {
     const attrs: Partial<ElementAttrs<'message'>> = {}
-    if (item.type) {
-      if (item.type === '卡片消息')
-        attrs['qq:message_type'] = QQ.MessageType.Ark
-      else if (item.type === '合并转发消息')
-        attrs['qq:message_type'] = QQ.MessageType.Forward
-      else
-        logger.warn('unknown forward message type', item.type)
-    }
+    if (item.type === '卡片消息')
+      attrs['qq:message_type'] = QQ.MessageType.Ark
+    else if (item.type)
+      logger.warn('unknown forward message type', item.type)
     element = h.message(attrs, ...children, ...quotes, ...content, ...attachments, forward)
   }
   // verify the format/parse consistency of this item in debug mode
