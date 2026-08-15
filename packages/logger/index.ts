@@ -13,11 +13,8 @@ class PlainConsole extends Exporter.Console {
 
 const factory = new Factory()
 factory.addExporter(new PlainConsole())
-// reggol's `%o` formatter forces `compact: true`, which inlines element trees
-factory.formatters.o = (value: unknown, exporter: Exporter): string => {
-  const options = { colors: !!exporter.colors, depth: Infinity, compact: false }
-  return inspect(value, options)
-}
+// reggol's `%o` formatter sets `breakLength: Infinity`, which inlines element trees
+factory.formatters.o = (value: unknown, exporter: Exporter): string => inspect(value, { colors: !!exporter.colors })
 
 const loggerMap = new Map<string, Logger>()
 
