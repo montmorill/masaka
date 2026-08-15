@@ -203,7 +203,10 @@ export function formatForwardItem(item: Element<'message' | 'quote'>): string {
  * the inverse of `parseForwardContent`.
  */
 export function formatForwardContent(forward: Element<'forward'>): string {
-  const lines: string[] = ['[群聊的聊天记录]']
+  const lines: string[] = []
+  const title = forward.attrs['qq:title']
+  if (title)
+    lines.push(title)
   const items = forward.children
   for (let index = 0; index < items.length; index++) {
     lines.push(`=== 消息 ${index + 1} ===`)

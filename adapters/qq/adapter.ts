@@ -48,6 +48,11 @@ declare module '@yarkjs/protocol' {
   interface Quote {
     'qq:msg_idx'?: QQ.RefMsgIdx
   }
+
+  interface Forward {
+    /** Original title line of the record, e.g. `[群聊的聊天记录]`. */
+    'qq:title'?: string
+  }
 }
 
 export class QQAdapter extends EventEmitter<Universal.EventMap> {

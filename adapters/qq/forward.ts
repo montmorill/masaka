@@ -351,8 +351,11 @@ export function parseForwardContent(content: string): Element<'forward'> {
   const lines = content.split('\n')
   let index = 0
   // forward records may begin with a title line such as `[群聊的聊天记录]`
-  if (lines[0] && /^\[.{1,30}的聊天记录\]$/.test(lines[0]))
+  let title: string | undefined
+  if (lines[0] && /^\[[^\]\n]+的聊天记录\]$/.test(lines[0])) {
+    title = lines[0]
     index++
+  }
   const expects = [1]
   const { items, index: rest } = parseForwardItems(lines, index, 0, expects)
   if (!items.length) {
@@ -361,5 +364,8 @@ export function parseForwardContent(content: string): Element<'forward'> {
   }
   if (lines.slice(rest).some(line => line.trim() !== ''))
     console.warn('unparsed forward content', lines.slice(rest))
-  return h.forward(...items.map(buildForwardItem))
+  const forward = h.forward(...items.map(buildForwardItem))
+  if (title)
+    forward.update({ 'qq:title': title })
+  return forward
 }
