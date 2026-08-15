@@ -91,6 +91,7 @@ export class Element<T extends keyof JSXElements = keyof JSXElements> implements
     colors: false,
     maxArrayLength: Infinity,
     maxStringLength: Infinity,
+    maxAttrStringLength: Infinity,
     breakLength: Infinity,
     compact: true,
   }): string {
