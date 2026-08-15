@@ -282,6 +282,28 @@ function buildForwardAttachment({
   return h.file(attrs)
 }
 
+/**
+ * Replace a face marker with the attachment it references,
+ * or a standalone `qq:face` element when no image attachment matches.
+ */
+function transformAttachment(
+  attachments: Element<'file' | 'audio' | 'image' | 'video'>[],
+  faceType: string,
+  faceId: string,
+  bExt: string,
+): Fragment {
+  const [type, id] = [+faceType, +faceId]
+  const { text, ...ext } = JSON.parse(Buffer.from(bExt, 'base64').toString('utf-8'))
+  const attachment = attachments[id] as Element<'image'>
+  if (!attachment || attachment.type !== 'image')
+    return h['qq:face']({ type, id: faceId, ...ext }, faceId ? `[${text}]` : text)
+  // @ts-ignore
+  attachments[id] = null
+  if (attachment.children.length > 1 || (attachment.children[0] ?? '') !== text)
+    logger.warn('unmatched ext.text', text, 'with attachment.content', attachment.children)
+  return attachment.update(withPrefix('qq:', { faceType: type, ...ext }))
+}
+
 function buildForwardItem(item: ForwardItem): Element<'message' | 'quote'> {
   const children: Fragment[] = []
   if (item.author)
@@ -301,29 +323,10 @@ function buildForwardItem(item: ForwardItem): Element<'message' | 'quote'> {
   }
   else if (item.content) {
     content.push(...h.transform.replace(
-      /<faceType=(\d+),faceId="(\d+)",ext="([A-Za-z0-9+/]+={0,2})">|<attachmentType="([^"]+)",attachmentIndex=(\d+),description="([A-Za-z0-9+/]+={0,2})">/g,
+      /<faceType=(\d+),faceId="(\d*)",ext="([A-Za-z0-9+/]+={0,2})">|<attachmentType="([^"]+)",attachmentIndex=(\d+),description="([A-Za-z0-9+/]+={0,2})">/g,
       (raw, faceType, faceId, bExt, attachmentType, attachmentIndex, description) => {
-        if (faceType) {
-          const [type, id] = [+faceType, +faceId]
-          const ext = JSON.parse(Buffer.from(bExt, 'base64').toString('utf-8'))
-          const attachment = attachments[id] as Element<'image'>
-          if (!attachment || attachment.type !== 'image')
-            return h['qq:face']({ type, id: faceId, ...ext }, `[${ext.text}]`)
-          // @ts-ignore
-          attachments[id] = null
-          if (attachment.children.length <= 1 && (attachment.children[0] ?? '') === ext.text) {
-            delete ext.text
-          }
-          else if (!attachment.children.length && ext.text) {
-            // forward attachments carry no caption, the marker's ext.text does
-            attachment.update(ext.text)
-            delete ext.text
-          }
-          else {
-            logger.warn('unmatched ext.text', ext.text, 'with attachment.content', attachment.children)
-          }
-          return attachment.update(withPrefix('qq:', { faceType: +faceType, ...ext }))
-        }
+        if (faceType)
+          return transformAttachment(attachments, faceType, faceId, bExt)
         const ext = JSON.parse(Buffer.from(description, 'base64').toString('utf-8'))
         const attachment = attachments[+attachmentIndex] as Element<'image'>
         if (!attachment || attachment.type !== 'image')
@@ -539,21 +542,8 @@ export class QQAdapter extends EventEmitter<Universal.EventMap> {
       element.children.push(this.parseMsgElements(message.msg_elements, ref_msg_idx as QQ.RefMsgIdx))
     const attachments = message.attachments ? this.parseAttachments(message.attachments) : []
     content = h.pack(h.transform.replace(
-      /<faceType=(\d+),faceId="(\d+)",ext="([A-Za-z0-9+/]+={0,2})">/g,
-      (_, faceType, faceId, bExt) => {
-        const [type, id] = [+faceType, +faceId]
-        const ext = JSON.parse(Buffer.from(bExt, 'base64').toString('utf-8'))
-        const attachment = attachments[id] as Element<'image'>
-        if (!attachment || attachment.type !== 'image')
-          return h['qq:face']({ type, id: faceId, ...ext }, `[${ext.text}]`)
-        // @ts-ignore
-        attachments[id] = null
-        if (attachment.children.length <= 1 && (attachment.children[0] ?? '') === ext.text)
-          delete ext.text
-        else
-          logger.warn('unmatched ext.text', ext.text, 'with attachment.content', attachment.children)
-        return attachment.update(withPrefix('qq:', { faceType: type, ...ext }))
-      },
+      /<faceType=(\d+),faceId="(\d*)",ext="([A-Za-z0-9+/]+={0,2})">/g,
+      (_, faceType, faceId, bExt) => transformAttachment(attachments, faceType, faceId, bExt),
     )(content))
     element.update(...h.unpack(content), ...attachments)
     return element
