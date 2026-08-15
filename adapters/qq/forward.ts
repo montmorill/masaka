@@ -83,7 +83,7 @@ function dedentForwardLine(line: string, indent: string): string {
 function parseForwardSize(size: string): number | undefined {
   const match = /^([\d.]+)\s*(B|KB|MB|GB|TB)?$/i.exec(size)
   if (!match) {
-    console.warn('unknown forward attachment size', size)
+    logger.warn('unknown forward attachment size', size)
     return
   }
   const units = { '': 1, 'B': 1, 'KB': 1024, 'MB': 1024 ** 2, 'GB': 1024 ** 3, 'TB': 1024 ** 4 } as const
@@ -245,7 +245,7 @@ function buildForwardAttachment({
     return h.audio(attrs as ElementAttrs<'audio'>)
   if (type === '文件')
     return h.file(attrs)
-  console.warn('unknown forward attachment type', type)
+  logger.warn('unknown forward attachment type', type)
   return h.file(attrs)
 }
 
@@ -331,15 +331,15 @@ function buildForwardItem(item: ForwardItem): Element<'message' | 'quote'> {
       else if (item.type === '合并转发消息')
         attrs['qq:message_type'] = QQ.MessageType.Forward
       else
-        console.warn('unknown forward message type', item.type)
+        logger.warn('unknown forward message type', item.type)
     }
     element = h.message(attrs, ...children, ...quotes, ...content, ...attachments, forward)
   }
-  // verify the format/parse consistency of this item
+  // verify the format/parse consistency of this item in debug mode
   if (item.source !== undefined) {
     const formatted = formatForwardItem(element)
     if (formatted !== item.source)
-      console.warn('forward item parse/format mismatch', item.source, formatted)
+      logger.warn('forward item parse/format mismatch', item.source, formatted)
   }
   return element
 }
@@ -359,11 +359,11 @@ export function parseForwardContent(content: string): Element<'forward'> {
   const expects = [1]
   const { items, index: rest } = parseForwardItems(lines, index, 0, expects)
   if (!items.length) {
-    console.warn('unrecognized forward content', content)
+    logger.warn('unrecognized forward content', content)
     return h.forward(content)
   }
   if (lines.slice(rest).some(line => line.trim() !== ''))
-    console.warn('unparsed forward content', lines.slice(rest))
+    logger.warn('unparsed forward content', lines.slice(rest))
   const forward = h.forward(...items.map(buildForwardItem))
   if (title)
     forward.update({ 'qq:title': title })

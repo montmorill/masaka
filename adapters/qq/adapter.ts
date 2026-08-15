@@ -157,7 +157,7 @@ export class QQAdapter extends EventEmitter<Universal.EventMap> {
       else if (attachment.content_type.startsWith('image/'))
         elements.push(this.parseImageAttachment(attrs, attachment))
       else
-        console.warn('unknown attachment', attachments[elements.length])
+        logger.warn('unknown attachment', attachments[elements.length])
       delete (attachment as any).content_type
     }
     return elements
@@ -167,15 +167,15 @@ export class QQAdapter extends EventEmitter<Universal.EventMap> {
     const element = h.quote({ 'qq:msg_idx': ref_msg_idx })
     for (const { ...msg_element } of msg_elements) {
       if (msg_element.msg_idx !== ref_msg_idx)
-        console.warn('unmatched msg_element.msg_idx', msg_element.msg_idx, 'with ref_msg_idx', ref_msg_idx)
+        logger.warn('unmatched msg_element.msg_idx', msg_element.msg_idx, 'with ref_msg_idx', ref_msg_idx)
       if (msg_element.author)
-        console.warn('unexpected msg_element.author', msg_element.author)
+        logger.warn('unexpected msg_element.author', msg_element.author)
       if (msg_element.message_type && msg_element.message_type !== QQ.MessageType.Quote)
-        console.warn('unexpected msg_element.message_type', QQ.MessageType.toString(msg_element.message_type))
+        logger.warn('unexpected msg_element.message_type', QQ.MessageType.toString(msg_element.message_type))
       if (msg_element.msg_elements)
-        console.warn('unexpected msg_element.msg_elements', msg_element.msg_elements)
+        logger.warn('unexpected msg_element.msg_elements', msg_element.msg_elements)
       if (msg_element.attachments)
-        console.warn('unexpected msg_element.attachments', msg_element.attachments)
+        logger.warn('unexpected msg_element.attachments', msg_element.attachments)
       else if (msg_element.ark_data)
         element.children.push(this.parseArkData(msg_element.ark_data).update(msg_element.content))
       else if (msg_element.content)
@@ -203,16 +203,16 @@ export class QQAdapter extends EventEmitter<Universal.EventMap> {
       if (content[0] === ' ')
         content = content.slice(1)
       else
-        console.warn('expected message.content startswith " ", got', content)
+        logger.warn('expected message.content startswith " ", got', content)
     }
     if (message_type === QQ.MessageType.Ark)
       content = this.parseArkData(message.ark_data).update(message.content)
     else if (message_type === QQ.MessageType.Parallel) // TODO: parallel
-      console.warn('unknown message type', message_type, message)
+      logger.warn('unknown message type', message_type, message)
     else if (message_type === QQ.MessageType.Forward)
       content = this.parseForwardContent(message.content)
     else if (message_type !== QQ.MessageType.Text && message_type !== QQ.MessageType.Quote)
-      console.warn('unknown message type', message_type, message)
+      logger.warn('unknown message type', message_type, message)
     if (message.mentions)
       content = this.parseMentions(message.content, message.mentions)
     if (message_type === QQ.MessageType.Quote)
@@ -231,7 +231,7 @@ export class QQAdapter extends EventEmitter<Universal.EventMap> {
     if (sender.name === '')
       delete sender.name
     else
-      console.warn('unexpected C2C_MESSAGE_CREATE author.username', sender.name)
+      logger.warn('unexpected C2C_MESSAGE_CREATE author.username', sender.name)
     const element = this.parseMessageContent(message)
     element.children.unshift(h.author(sender))
     return [element]

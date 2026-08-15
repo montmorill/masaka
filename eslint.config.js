@@ -5,6 +5,7 @@ import antfu from '@antfu/eslint-config'
 export default antfu({
   rules: {
     'multiline-ternary': 'off',
+    'no-console': 'error',
     'style/multiline-ternary': 'off',
     'style/no-extra-parens': ['error'],
     'style/operator-linebreak': ['error', 'before', {

@@ -1,5 +1,6 @@
 import type { Element, ElementAttrs, Fragment } from '@yarkjs/element'
 import { Buffer } from 'node:buffer'
+import { logger } from '@yarkjs/logger'
 import * as QQ from './common'
 
 interface ForwardItemParts {
@@ -69,7 +70,7 @@ function serializeForwardContent(fragments: Fragment[]): string {
         return `<attachmentType="${attrs['qq:attachmentType']}",attachmentIndex=${attachmentIndex++},description="${ext}">`
       }
     }
-    console.warn('unknown forward content fragment', fragment)
+    logger.warn('unknown forward content fragment', fragment)
     return ''
   }).join('')
 }
@@ -137,7 +138,7 @@ function formatForwardMessageType(type: QQ.MessageType): string {
     return '合并转发消息'
   if (type === QQ.MessageType.Quote)
     return '引用消息'
-  console.warn('unknown forward message type', type)
+  logger.warn('unknown forward message type', type)
   return ''
 }
 
