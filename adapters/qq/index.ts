@@ -14,7 +14,7 @@ const logger = createLogger('qq')
 
 Formatter.defaultOptions.compact = false
 Formatter.defaultOptions.quoteText = true
-Formatter.defaultOptions.maxAttrStringLength = 80
+Formatter.defaultOptions.maxAttrStringLength = 40
 
 logger.debug = noop
 
