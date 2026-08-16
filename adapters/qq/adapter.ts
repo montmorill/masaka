@@ -16,22 +16,24 @@ export type Ark<T extends string = string, Data extends QQ.ArkData = QQ.ArkData<
   /** 卡片消息中的用户操作提示文本 */ prompt: Data['prompt']
 } & Data['fields']
 
+export interface QQElements {
+  'qq:ark': Ark
+  'qq:face': {
+    type: number
+    id: string
+    text: string
+  }
+}
 declare module '@yarkjs/element' {
-  interface Elements {
-    'image': {
+  interface Elements extends QQElements {
+    image: {
       'qq:faceType'?: number
       'qq:attachmentType'?: string
       'qq:content_type'?: string
     }
-    'audio': {
+    audio: {
       'qq:voice_wav_url': string
       'qq:asr_refer_text': string
-    }
-    'qq:ark': Ark
-    'qq:face': {
-      type: number
-      id: string
-      text: string
     }
   }
 }
@@ -146,7 +148,7 @@ export class QQAdapter extends EventEmitter<Universal.EventMap> {
     return h.image({ ...attrs, width, height, ...withPrefix('qq:', attachment) }, content)
   }
 
-  parseAttachments(attachments: QQ.MessageAttachment[]): Element<'file' | 'audio' | 'image' | 'video'>[] {
+  parseAttachments(attachments: QQ.Attachment[]): Element<'file' | 'audio' | 'image' | 'video'>[] {
     const elements = []
     for (const { url, filename, size, ...attachment } of attachments) {
       const attrs = { src: url, title: filename, size }

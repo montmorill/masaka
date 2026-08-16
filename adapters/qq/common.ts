@@ -192,7 +192,7 @@ export interface MessageScene {
   source: 'default'
 }
 
-export interface MessageAttachmentContentTypes {
+export interface AttachmentTypes {
   'voice': { voice_wav_url: string, asr_refer_text: string }
   'image/jpeg': { width: number, height: number, content: string }
   'image/png': { width: number, height: number, content: string }
@@ -201,13 +201,13 @@ export interface MessageAttachmentContentTypes {
   'file': object
 }
 
-export type MessageAttachment =
+export type Attachment =
   { url: string, filename: string, size: number } & {
-    [K in keyof MessageAttachmentContentTypes]:
-    { content_type: K } & MessageAttachmentContentTypes[K]
-  }[keyof MessageAttachmentContentTypes]
+    [K in keyof AttachmentTypes]:
+    { content_type: K } & AttachmentTypes[K]
+  }[keyof AttachmentTypes]
 
-export interface KnownArkDataTypes {
+export interface ArkTypes {
   unknown: { ark_name: '' } & (
     | { prompt: '[分享]空间说说' }
     | { prompt: `创建了群相册《${string}》` }
@@ -301,7 +301,7 @@ export interface KnownArkDataTypes {
 }
 
 /** Ark type of each card name in the format line, the reverse of `ark_name`. */
-export const ArkTypeByName: Record<string, keyof KnownArkDataTypes> = {
+export const ArkTypeByName: Record<string, keyof ArkTypes> = {
   图文H5: 'tuwen',
   图文卡片: 'feed',
   小程序: 'miniapp',
@@ -313,14 +313,14 @@ export const ArkTypeByName: Record<string, keyof KnownArkDataTypes> = {
 
 export interface ArkData<T extends string = string> {
   /** 卡片消息中的用户操作提示文本 */ prompt:
-  KnownArkDataTypes extends Record<T, { prompt: string }>
-    ? KnownArkDataTypes[T]['prompt'] : string
+  ArkTypes extends Record<T, { prompt: string }>
+    ? ArkTypes[T]['prompt'] : string
   /** 卡片消息类型标识 */ ark_type: T
   /** 卡片消息类型的中文名称 */ ark_name:
-  KnownArkDataTypes extends Record<T, { ark_name: string }>
-    ? KnownArkDataTypes[T]['ark_name'] : string
-  /** 卡片消息字段 */ fields: T extends keyof KnownArkDataTypes
-    ? Omit<KnownArkDataTypes[T], 'ark_name' | 'prompt'>
+  ArkTypes extends Record<T, { ark_name: string }>
+    ? ArkTypes[T]['ark_name'] : string
+  /** 卡片消息字段 */ fields: T extends keyof ArkTypes
+    ? Omit<ArkTypes[T], 'ark_name' | 'prompt'>
     : Record<string, string>
 }
 
@@ -329,7 +329,7 @@ export interface MsgElement<T extends MessageType = MessageType> {
   /** 该元素对应的消息发送者 */ author?: never | unknown
   /** 消息内容类型 */ message_type?: T
   /** 消息正文内容 */ content: string
-  /** 该元素携带的附件 */ attachments?: MessageAttachment[]
+  /** 该元素携带的附件 */ attachments?: Attachment[]
   /** 结构化卡片消息数据 */ ark_data?: T extends MessageType.Ark ? ArkData : never
   /** 嵌套消息元素列表 */ msg_elements?: MsgElement[]
 }
@@ -341,7 +341,7 @@ export interface Message<T extends MessageType = MessageType> {
   /** 消息发送时间，RFC3339 格式 */ timestamp: string
   /** 消息内容类型（同 C2C_MESSAGE_CREATE） */ message_type: T
   /** 消息场景上下文 */ message_scene: MessageScene
-  /** 消息附件 */ attachments?: MessageAttachment[]
+  /** 消息附件 */ attachments?: Attachment[]
   /** 结构化卡片消息数据 */ ark_data: T extends MessageType.Ark ? ArkData : never
   /** 消息元素列表 */ msg_elements: T extends MessageType.Quote ? MsgElement[] : never
 }
