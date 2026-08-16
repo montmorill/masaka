@@ -272,7 +272,20 @@ export interface KnownArkDataTypes {
     contact: '在这里，发现更多~'
     /** @type `https://p.qlogo.cn/gh/${this['uin']}/${this['uin']}/100` */
   })
-  /** 视频分享 */ video_share: unknown
+  /** 视频分享 */ video_share: {
+    /** @type `[短视频] ${this['title']}` */
+    prompt: `[短视频] ${string}`
+    ark_name: '视频'
+    type: 'video'
+    title: string
+    preview: string
+    nickname: string
+    /** @type this['nickname'] */
+    desc: string
+    avatar: string
+    jumpUrl: `mqqapi://qcircle/opendetail?${string}`
+    sourceLogo: 'https://qq-video.cdn-go.cn/url-resource/latest/defaultmode/changename/qvideo_ark_icon_line_publish_cross.png'
+  }
   /** 一起听歌 */ music_together: {
     /** @type `[开启了一起听歌] ${this['desc']}` */
     prompt: `[开启了一起听歌] ${string}`
@@ -285,6 +298,17 @@ export interface KnownArkDataTypes {
     inviteType: 'listen' | unknown
     button: '加入一起听歌' | string
   }
+}
+
+/** Ark type of each card name in the format line, the reverse of `ark_name`. */
+export const ArkTypeByName: Record<string, keyof KnownArkDataTypes> = {
+  图文H5: 'tuwen',
+  图文卡片: 'feed',
+  小程序: 'miniapp',
+  位置卡片: 'map',
+  好友名片: 'contact_card',
+  视频: 'video_share',
+  一起听歌: 'music_together',
 }
 
 export interface ArkData<T extends string = string> {

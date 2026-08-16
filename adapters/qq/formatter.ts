@@ -79,21 +79,11 @@ function serializeForwardContent(fragments: Fragment[]): string {
 
 /** Format a `[卡片消息]` field from the card element attrs. */
 function formatForwardCard(card: Element<'qq:ark'>): string {
-  let line = card.attrs.name ?? ''
+  let line = card.attrs.ark_name ?? ''
   for (const [key, value] of Object.entries(card.attrs)) {
-    if (key === 'name')
-      continue
-    if (key === 'prompt') {
-      if (!value)
-        continue // defaulted empty prompt was not in the original line
-      line += ` 摘要:${value}`
-    }
-    else if (key === 'type' && value === 'unknown') {
-      continue // defaulted type was not in the original line
-    }
-    else {
-      line += ` ${key}:${value}`
-    }
+    if (key === 'ark_name' || key === 'ark_type')
+      continue // identifier attrs are not fields of the format line
+    line += ` ${key === 'prompt' ? '摘要' : key}:${value}`
   }
   return line
 }

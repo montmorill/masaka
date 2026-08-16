@@ -11,9 +11,9 @@ import { parseForwardContent, transformAttachment } from './forward'
 const logger = createLogger('qq')
 
 export type Ark<T extends string = string, Data extends QQ.ArkData = QQ.ArkData<T>> = {
+  /** 卡片消息类型标识 */ ark_type: T
+  /** 卡片消息类型的中文名称 */ ark_name: Data['ark_name']
   /** 卡片消息中的用户操作提示文本 */ prompt: Data['prompt']
-  /** 卡片消息类型标识 */ type: T
-  /** 卡片消息类型的中文名称 */ name: Data['ark_name']
 } & Data['fields']
 
 declare module '@yarkjs/element' {
@@ -111,8 +111,8 @@ export class QQAdapter extends EventEmitter<Universal.EventMap> {
     }))
   }
 
-  parseArkData({ prompt, ark_type: type, ark_name: name, fields }: QQ.ArkData): Element<'qq:ark'> {
-    return h['qq:ark']({ prompt, type, name, ...fields })
+  parseArkData({ prompt, ark_type, ark_name, fields }: QQ.ArkData): Element<'qq:ark'> {
+    return h['qq:ark']({ ark_type, ark_name, prompt, ...fields })
   }
 
   parseForwardContent(content: string): Element<'forward'> {

@@ -280,13 +280,14 @@ function buildForwardItem(item: ForwardItem): Element<'message' | 'quote' | 'for
   const attachments = item.attachments.map(buildForwardAttachment)
   const content: Fragment[] = []
   if (item.card) {
-    // spread first so prompt/type keep their original field order
-    const fields = { ...item.card.fields }
+    // fields keep their original order: the card line order varies per message,
+    // so the parsed order is this message's format order
+    const { prompt = '', ...fields } = item.card.fields
     const ark = h['qq:ark']({
+      ark_type: QQ.ArkTypeByName[item.card.name] ?? 'unknown',
+      ark_name: item.card.name,
+      prompt,
       ...fields,
-      prompt: fields.prompt ?? '',
-      type: fields.type ?? 'unknown',
-      name: item.card.name,
     })
     if (item.content)
       ark.update(item.content)
