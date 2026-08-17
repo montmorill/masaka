@@ -283,8 +283,8 @@ export interface ArkTypes {
     /** @type this['nickname'] */
     desc: string
     avatar: string
-    jumpUrl: `mqqapi://qcircle/opendetail?${string}`
-    sourceLogo: 'https://qq-video.cdn-go.cn/url-resource/latest/defaultmode/changename/qvideo_ark_icon_line_publish_cross.png'
+    jump_url: `mqqapi://qcircle/opendetail?${string}`
+    source_logo: 'https://qq-video.cdn-go.cn/url-resource/latest/defaultmode/changename/qvideo_ark_icon_line_publish_cross.png'
   }
   /** 一起听歌 */ music_together: {
     /** @type `[开启了一起听歌] ${this['desc']}` */
@@ -292,10 +292,10 @@ export interface ArkTypes {
     ark_name: '一起听歌'
     /** 标题 */ title: '一起听歌'
     /** 描述 */ desc: string
-    songId: string
+    song_id: string
     cover: `http://img.tencentmusic.com/${string}`
     type: 'music_invite' | unknown
-    inviteType: 'listen' | unknown
+    invite_type: 'listen' | unknown
     button: '加入一起听歌' | string
   }
 }
@@ -309,6 +309,13 @@ export const ArkTypeByName: Record<string, keyof ArkTypes> = {
   好友名片: 'contact_card',
   视频: 'video_share',
   一起听歌: 'music_together',
+}
+
+/** QQ's format-line spellings of ark field keys per type, mapped to their snake_case names. */
+export const ArkFieldAliases: Record<string, Record<string, string>> = {
+  contact_card: { jumpUrl: 'jump_url' },
+  video_share: { jumpUrl: 'jump_url', sourceLogo: 'source_logo' },
+  music_together: { songId: 'song_id', inviteType: 'invite_type' },
 }
 
 export interface ArkData<T extends string = string> {

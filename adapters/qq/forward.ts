@@ -2,7 +2,7 @@ import type { Element, ElementAttrs, Fragment } from '@yarkjs/element'
 import { Buffer } from 'node:buffer'
 import h from '@yarkjs/element'
 import { createLogger } from '@yarkjs/logger'
-import { withPrefix } from '@yarkjs/utils'
+import { snakeCaseKeys, withPrefix } from '@yarkjs/utils'
 import * as QQ from './common'
 import { formatForwardItem } from './formatter'
 
@@ -283,11 +283,12 @@ function buildForwardItem(item: ForwardItem): Element<'message' | 'quote' | 'for
     // fields keep their original order: the card line order varies per message,
     // so the parsed order is this message's format order
     const { prompt = '', ...fields } = item.card.fields
+    const type = QQ.ArkTypeByName[item.card.name] ?? 'unknown'
     const ark = h['qq:ark']({
-      ark_type: QQ.ArkTypeByName[item.card.name] ?? 'unknown',
+      ark_type: type,
       ark_name: item.card.name,
       prompt,
-      ...fields,
+      ...snakeCaseKeys(fields),
     })
     if (item.content)
       ark.update(item.content)

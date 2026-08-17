@@ -4,7 +4,7 @@ import type QQBot from './bot'
 import EventEmitter from 'node:events'
 import h from '@yarkjs/element'
 import { createLogger } from '@yarkjs/logger'
-import { withPrefix } from '@yarkjs/utils'
+import { snakeCaseKeys, withPrefix } from '@yarkjs/utils'
 import * as QQ from './common'
 import { parseForwardContent, transformAttachment } from './forward'
 
@@ -114,7 +114,7 @@ export class QQAdapter extends EventEmitter<Universal.EventMap> {
   }
 
   parseArkData({ prompt, ark_type, ark_name, fields }: QQ.ArkData): Element<'qq:ark'> {
-    return h['qq:ark']({ ark_type, ark_name, prompt, ...fields })
+    return h['qq:ark']({ ark_type, ark_name, prompt, ...snakeCaseKeys(fields) })
   }
 
   parseForwardContent(content: string): Element<'forward'> {
