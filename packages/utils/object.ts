@@ -1,22 +1,35 @@
-import type { SnakeCase } from './cases'
+import type { SnakeCase, SplitWords } from './cases'
 import type { Overwrite, Pretty } from './types'
-import cases, { split } from './cases'
+import cases, { splitWords } from './cases'
 
-/** Rewrite the keys of an object to snake_case, preserving the value order. */
-export function snakeCaseKeys<T extends Record<string, any>>(object: T):
-{ [K in Extract<keyof T, string> as SnakeCase<K>]: T[K] } {
-  return Object.fromEntries(
-    Object.entries(object).map(([key, value]) => [cases.snake(split(key)), value]),
-  ) as any
+export function mapKeys<
+  M extends { [K in Extract<keyof T, string>]: ReturnType<F> },
+  T extends Record<string, unknown>,
+  F extends <K extends Extract<keyof T, string>>(key: K, value: T[K]) => string,
+>(
+  obj: T,
+  transform: F,
+): { [K in Extract<keyof T, string> as M[K]]: T[K] } {
+  const res = {} as any
+  for (const key in obj)
+    res[transform(key, obj[key])] = obj[key]
+  return res
 }
 
-export function stripNullish<T extends Record<string, any>>(object: T):
-Pretty<Overwrite<T, { [K in keyof T as null extends T[K] ? K : never]?: NonNullable<T[K]> }>> {
-  for (const key in Object.keys(object)) {
-    if (object[key] == null)
-      delete object[key]
+export function filterKeys<
+  K extends { [P in Extract<keyof T, string>]: boolean },
+  T extends Record<string, unknown>,
+  F extends <P extends Extract<keyof T, string>>(key: P, value: T[P]) => boolean,
+>(
+  obj: T,
+  predicate: F,
+): { [P in Extract<keyof T, string> as K[P] extends false ? never : P]: T[P] } {
+  const res = {} as any
+  for (const key in obj) {
+    if (predicate(key, obj[key]))
+      res[key] = obj[key]
   }
-  return object as any
+  return res
 }
 
 export function withPrefix<
@@ -26,6 +39,16 @@ export function withPrefix<
   prefix: P,
   object: T,
 ): { [K in Extract<keyof T, string> as `${P}${K}`]: T[K] } {
-  return Object.fromEntries(Object.entries(object)
-    .map(([key, value]) => [prefix + key, value])) as any
+  return mapKeys(object, key => prefix + key) as any
+}
+
+/** Rewrite the keys of an object to snake_case, preserving the value order. */
+export function snakeCaseKeys<T extends Record<string, any>>(obj: T):
+{ [K in Extract<keyof T, string> as SnakeCase<SplitWords<K>>]: T[K] } {
+  return mapKeys(obj, key => cases.snake(splitWords(key))) as any
+}
+
+export function stripNullish<T extends Record<string, any>>(object: T):
+Pretty<Overwrite<T, { [K in keyof T as null extends T[K] ? K : never]?: NonNullable<T[K]> }>> {
+  return filterKeys(object, (_, value) => value != null) as any
 }
