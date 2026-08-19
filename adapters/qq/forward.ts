@@ -4,7 +4,6 @@ import h from '@yarkjs/element'
 import { createLogger } from '@yarkjs/logger'
 import { snakeCaseKeys, withPrefix } from '@yarkjs/utils'
 import * as QQ from './common'
-import { formatForwardItem } from './formatter'
 
 const logger = createLogger('qq')
 
@@ -29,8 +28,6 @@ interface ForwardItem {
   type?: string
   card?: ForwardCard
   forward?: ForwardItem[]
-  /** Original dedented field lines, for format/parse consistency checking. */
-  source?: string
 }
 
 /**
@@ -163,13 +160,9 @@ function parseForwardItems(
     index++
     const start = index
     const parsed = parseForwardItem(lines, index, level, expects)
-    const indent = ' '.repeat(4 * level)
     const source = lines.slice(start, parsed.index)
     while (source.length && source[source.length - 1]!.trim() === '')
       source.pop() // trailing blanks between items are structural, not part of the item
-    parsed.item.source = source
-      .map(line => dedentForwardLine(line, indent))
-      .join('\n')
     items.push(parsed.item)
     index = parsed.index
     expects[level]!++
@@ -340,12 +333,6 @@ function buildForwardItem(item: ForwardItem): Element<'message' | 'quote' | 'for
     else if (item.type)
       logger.warn('unknown forward message type', item.type)
     element = h.message(attrs, ...children, ...quotes, ...content, ...attachments, forward)
-  }
-  // verify the format/parse consistency of this item in debug mode
-  if (item.source !== undefined) {
-    const formatted = formatForwardItem(element)
-    if (formatted !== item.source)
-      logger.warn('forward item parse/format mismatch', item.source, formatted)
   }
   return element
 }
