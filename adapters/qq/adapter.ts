@@ -226,7 +226,7 @@ export class QQAdapter extends EventEmitter<Universal.EventMap> {
       /<faceType=(\d+),faceId="(\d*)",ext="([A-Za-z0-9+/]+={0,2})">/g,
       (_, faceType, faceId, bExt) => transformAttachment(attachments, faceType, faceId, bExt),
     )(content))
-    element.update(...h.unpack(content), ...attachments)
+    element.update(content, ...attachments)
     return element
   }
 

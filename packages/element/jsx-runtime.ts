@@ -3,6 +3,7 @@ import type { Inspectable } from 'node:util'
 import type { FormatOptions } from './formatter'
 import { inspect } from 'node:util'
 import { BufferFormatter } from './formatter'
+import { unpack } from './utils'
 
 export const Fragment = 'template'
 
@@ -74,7 +75,7 @@ export class Element<T extends keyof JSXElements = keyof JSXElements> implements
   update(...args: PartialElementInit<T>): this {
     if (typeof args[0] === 'object' && !(args[0] instanceof Element))
       Object.assign(this.attrs, args.shift())
-    this.children.push(...args.filter(Boolean) as Fragment[])
+    this.children.push(...args.flatMap(child => child ? unpack(child as Fragment) : []))
     return this
   }
 
@@ -105,8 +106,7 @@ export class Element<T extends keyof JSXElements = keyof JSXElements> implements
   }
 }
 
-export type Component<T extends keyof JSXElements> =
-  (...args: ElementInit<T>) => Element<ElementType<T>>
+export type Component<T extends keyof JSXElements> = (...args: ElementInit<T>) => Element<ElementType<T>>
 
 function h<T extends keyof JSXElements>(type: ElementType<T>, ...args: ElementInit<T>): Element<T> {
   if (h.components[type]) // @ts-ignore

@@ -21,15 +21,13 @@ export function raw(strings: TemplateStringsArray, ...values: Fragment[]): Fragm
   return pack(strings.flatMap((s, i) => values[i] ? [s, values[i]] : [s]))
 }
 
-export type TextVisitor = (content: string) => Fragment[]
-export type ElementVisitors = { [T in keyof JSXElements]?: (element: Element<T>) => Fragment[] }
-export type Transformer = (fragment: Fragment) => Fragment[]
-export function transform(visitors: { text?: TextVisitor } & ElementVisitors): Transformer {
+export type Transformer<T extends Fragment = Fragment> = (fragment: T) => Fragment[]
+export type ElementVisitors = { [T in keyof JSXElements]?: Transformer<Element<T>> }
+export function transform(visitors: { text?: Transformer<string> } & ElementVisitors): Transformer {
   return function transform(fragment: Fragment) {
-    if (typeof fragment === 'string' && visitors.text) {
+    if (typeof fragment === 'string' && visitors.text)
       return Array.from(visitors.text(fragment))
-    }
-    else if (fragment instanceof Element) {
+    if (fragment instanceof Element) {
       fragment.children = fragment.children.flatMap(transform)
       const visit = visitors[fragment.type]
       if (visit)
@@ -39,7 +37,7 @@ export function transform(visitors: { text?: TextVisitor } & ElementVisitors): T
   }
 }
 
-transform.text = (text: TextVisitor): Transformer => transform({ text })
+transform.text = (text: Transformer<string>): Transformer => transform({ text })
 
 export function* replace(
   content: string,
@@ -53,18 +51,17 @@ export function* replace(
 
   if (!pattern.global) {
     const match = pattern.exec(content)
-    if (match) {
-      const index = match.index
-      if (index > 0)
-        yield content.substring(0, index)
-      yield replacer(match[0], ...match.slice(1))
-      const after = index + match[0].length
-      if (after < content.length)
-        yield content.substring(after)
-    }
-    else {
+    if (!match) {
       yield content
+      return
     }
+    const index = match.index
+    if (index > 0)
+      yield content.substring(0, index)
+    yield replacer(match[0], ...match.slice(1))
+    const after = index + match[0].length
+    if (after < content.length)
+      yield content.substring(after)
     return
   }
 
