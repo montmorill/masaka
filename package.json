@@ -11,14 +11,6 @@
     "lint": "eslint .",
     "lint:fix": "eslint --fix ."
   },
-  "dependencies": {
-    "@yarkjs/adapter-qq": "workspace:^",
-    "@yarkjs/element": "workspace:^",
-    "@yarkjs/logger": "workspace:^",
-    "@yarkjs/markdown": "workspace:^",
-    "@yarkjs/protocol": "workspace:^",
-    "@yarkjs/utils": "workspace:^"
-  },
   "devDependencies": {
     "@antfu/eslint-config": "^9.3.0",
     "@types/node": "^26.2.0",
