@@ -1,7 +1,7 @@
 import type { Element, Fragment } from '@yarkjs/element'
 import type * as Universal from '@yarkjs/protocol'
 import type { SnakeCaseKeys } from '@yarkjs/utils'
-import type QQBot from './bot'
+import type { QQBot } from './bot'
 import EventEmitter from 'node:events'
 import h from '@yarkjs/element'
 import { createLogger } from '@yarkjs/logger'
