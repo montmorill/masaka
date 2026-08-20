@@ -101,7 +101,7 @@ export class Element<T extends keyof JSXElements = keyof JSXElements> implements
     return formatter.buffer
   }
 
-  [inspect.custom](_: any, opts: FormatOptions): string {
+  [inspect.custom](_: unknown, opts: FormatOptions): string {
     return this.toString(opts)
   }
 }

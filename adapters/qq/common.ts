@@ -462,7 +462,7 @@ export interface PayloadData {
     token: AccessToken
     intents: Intents
     shard?: Shard
-    properties?: Record<string, any>
+    properties?: Record<string, unknown>
   }
   [OpCode.Reconnect]: { d: never }
   [OpCode.Resume]: {

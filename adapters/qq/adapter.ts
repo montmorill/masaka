@@ -67,7 +67,7 @@ export class QQAdapter extends EventEmitter<Universal.EventMap> {
   ) {
     super()
     const adapt = <
-      A extends any[],
+      A extends unknown[],
       T extends keyof Universal.EventMap,
       P extends keyof QQAdapter,
     >(

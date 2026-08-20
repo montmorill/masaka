@@ -18,7 +18,7 @@ export function mapKeys<
 
 export function withPrefix<
   P extends string,
-  T extends Record<string, any>,
+  T extends Record<string, unknown>,
 >(
   prefix: P,
   object: T,
@@ -31,7 +31,7 @@ export type SnakeCaseKeys<T extends Record<string, unknown>> = {
 }
 
 /** Rewrite the keys of an object to snake_case, preserving the value order. */
-export function snakeCaseKeys<T extends Record<string, any>>(obj: T): SnakeCaseKeys<T> {
+export function snakeCaseKeys<T extends Record<string, unknown>>(obj: T): SnakeCaseKeys<T> {
   return mapKeys(obj, key => cases.snake(splitWords(key))) as any
 }
 
@@ -51,7 +51,7 @@ export function filterEntries<
   return res
 }
 
-export function stripNullish<T extends Record<string, any>>(object: T):
+export function stripNullish<T extends Record<string, unknown>>(object: T):
 Pretty<Overwrite<T, { [K in keyof T as null extends T[K] ? K : never]?: NonNullable<T[K]> }>> {
   return filterEntries(object, (_, value) => value != null) as any
 }
