@@ -22,7 +22,6 @@ export interface QQElements {
   'qq:face': {
     type: number
     id: string
-    text: string
   }
 }
 declare module '@yarkjs/element' {

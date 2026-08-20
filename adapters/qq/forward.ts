@@ -50,15 +50,8 @@ function matchForwardSeparator(line: string, level: number, expects: number[]): 
 
 /** Whether the line is the separator of one of the open item lists. */
 function matchOpenSeparator(line: string, level: number, expects: number[]): boolean {
-  const match = /^=== 消息 (\d+) ===$/.exec(line)
-  if (match && +match[1]! === expects[0])
-    return true
-  for (let index = 1; index <= level; index++) {
-    const indent = ' '.repeat(4 * (index - 1))
-    if (!line.startsWith(indent))
-      continue
-    const match = /^--- 第(\d+)条 ---$/.exec(line.slice(indent.length))
-    if (match && +match[1]! === expects[index])
+  for (let index = 0; index <= level; index++) {
+    if (matchForwardSeparator(line, index, expects))
       return true
   }
   return false
@@ -79,14 +72,13 @@ function dedentForwardLine(line: string, indent: string): string {
   return line.startsWith(indent) ? line.slice(indent.length) : line
 }
 
+const sizeUnits = { B: 1, KB: 1024, MB: 1024 ** 2, GB: 1024 ** 3, TB: 1024 ** 4 } as const
+
 function parseForwardSize(size: string): number | undefined {
-  const match = /^([\d.]+)\s*(B|KB|MB|GB|TB)?$/i.exec(size)
-  if (!match) {
-    logger.warn('unknown forward attachment size', size)
-    return
-  }
-  const units = { '': 1, 'B': 1, 'KB': 1024, 'MB': 1024 ** 2, 'GB': 1024 ** 3, 'TB': 1024 ** 4 } as const
-  return +match[1]! * units[(match[2] ?? '').toUpperCase() as keyof typeof units]
+  const match = /^([\d.]+)\s*(B|KB|MB|GB|TB)$/i.exec(size)
+  if (!match)
+    return void logger.warn('unknown forward attachment size', size)
+  return +match[1]! * sizeUnits[match[2]!.toUpperCase() as keyof typeof sizeUnits]
 }
 
 function parseForwardAttachment(line: string): ForwardAttachment {
@@ -158,11 +150,7 @@ function parseForwardItems(
     if (!matchForwardSeparator(line, level, expects))
       break
     index++
-    const start = index
     const parsed = parseForwardItem(lines, index, level, expects)
-    const source = lines.slice(start, parsed.index)
-    while (source.length && source[source.length - 1]!.trim() === '')
-      source.pop() // trailing blanks between items are structural, not part of the item
     items.push(parsed.item)
     index = parsed.index
     expects[level]!++
@@ -252,18 +240,20 @@ export function transformAttachment(
   attachments: Element<'file' | 'audio' | 'image' | 'video'>[],
   faceType: string,
   faceId: string,
-  bExt: string,
+  ext: string,
 ): Fragment {
   const [type, id] = [+faceType, +faceId]
-  const { text, ...ext } = JSON.parse(Buffer.from(bExt, 'base64').toString('utf-8'))
+  const { text, ...data } = JSON.parse(Buffer.from(ext, 'base64').toString('utf-8'))
   const attachment = attachments[id] as Element<'image'>
-  if (!attachment || attachment.type !== 'image')
-    return h['qq:face']({ type, id: faceId, ...ext }, faceId ? `[${text}]` : text)
+  if (!attachment || attachment.type !== 'image') {
+    // the declared attrs require text, but it travels in the children instead
+    return h['qq:face']({ type, id: faceId, ...data }, faceId ? `[${text}]` : text)
+  }
   // @ts-ignore
   attachments[id] = null
   if (attachment.children.length > 1 || (attachment.children[0] ?? '') !== text)
     logger.warn('unmatched ext.text', text, 'with attachment.content', attachment.children)
-  return attachment.update(withPrefix('qq:', { faceType: type, ...ext }))
+  return attachment.update(withPrefix('qq:', { faceType: type, ...data }))
 }
 
 function buildForwardItem(item: ForwardItem): Element<'message' | 'quote' | 'forward'> {
@@ -290,19 +280,19 @@ function buildForwardItem(item: ForwardItem): Element<'message' | 'quote' | 'for
   else if (item.content) {
     content.push(...h.transform.replace(
       /<faceType=(\d+),faceId="(\d*)",ext="([A-Za-z0-9+/]+={0,2})">|<attachmentType="([^"]+)",attachmentIndex=(\d+),description="([A-Za-z0-9+/]+={0,2})">/g,
-      (raw, faceType, faceId, bExt, attachmentType, attachmentIndex, description) => {
+      (raw, faceType, faceId, ext, attachmentType, attachmentIndex, description) => {
         if (faceType)
-          return transformAttachment(attachments, faceType, faceId, bExt)
-        const ext = JSON.parse(Buffer.from(description, 'base64').toString('utf-8'))
-        const attachment = attachments[+attachmentIndex] as Element<'image'>
+          return transformAttachment(attachments, faceType, faceId, ext)
+        const index = +attachmentIndex
+        const { text, ...data } = JSON.parse(Buffer.from(description, 'base64').toString('utf-8'))
+        const attachment = attachments[index] as Element<'image'>
         if (!attachment || attachment.type !== 'image')
           return raw
         // @ts-ignore
-        attachments[+attachmentIndex] = null
-        if (ext.text)
-          attachment.update(ext.text)
-        delete ext.text
-        return attachment.update(withPrefix('qq:', { attachmentType, ...ext }))
+        attachments[index] = null
+        if (text)
+          attachment.update(text)
+        return attachment.update(withPrefix('qq:', { attachmentType, ...data }))
       },
     )(item.content))
   }
