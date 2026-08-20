@@ -261,7 +261,7 @@ export class QQBot {
   }
 
   /** 撤回私信 DELETE /dms/{guild_id}/messages/{message_id} */
-  async retractDMMessage(guildId: string, messageId: string, hideTip = false): Promise<void> {
+  async recallDMMessage(guildId: string, messageId: string, hideTip = false): Promise<void> {
     return await this.fetch(`/dms/${guildId}/messages/${messageId}${this.query({ hideTip })}`, { method: 'DELETE' })
   }
 
@@ -274,7 +274,7 @@ export class QQBot {
   }
 
   /** 撤回频道消息 DELETE /channels/{channel_id}/messages/{message_id} */
-  async retractChannelMessage(channelId: string, messageId: string, hideTip = false): Promise<void> {
+  async recallChannelMessage(channelId: string, messageId: string, hideTip = false): Promise<void> {
     return await this.fetch(`/channels/${channelId}/messages/${messageId}${this.query({ hideTip })}`, { method: 'DELETE' })
   }
 
@@ -636,12 +636,12 @@ export class QQBot {
   }
 
   /** 撤回单聊消息 DELETE /v2/users/{user_openid}/messages/{message_id} */
-  async retractUserMessage(userOpenid: string, messageId: string): Promise<void> {
+  async recallUserMessage(userOpenid: string, messageId: string): Promise<void> {
     return await this.fetch(`/v2/users/${userOpenid}/messages/${messageId}`, { method: 'DELETE' })
   }
 
   /** 撤回群聊消息 DELETE /v2/groups/{group_openid}/messages/{message_id} */
-  async retractGroupMessage(groupOpenid: string, messageId: string): Promise<void> {
+  async recallGroupMessage(groupOpenid: string, messageId: string): Promise<void> {
     return await this.fetch(`/v2/groups/${groupOpenid}/messages/${messageId}`, { method: 'DELETE' })
   }
 
