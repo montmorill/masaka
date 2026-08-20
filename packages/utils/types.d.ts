@@ -22,3 +22,11 @@ export type Overloads<F, Fp = unknown> =
 export type OptionalKeys<T> =
   keyof { [K in keyof T as K extends keyof T
     ? T extends Record<K, T[K]> ? never : K : never]: never }
+
+// RegExp.escape is standardized in ES2025, but the installed TypeScript lib
+// does not declare it yet. The Bun runtime provides it.
+declare global {
+  interface RegExpConstructor {
+    escape(value: string): string
+  }
+}
