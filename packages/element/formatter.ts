@@ -1,21 +1,24 @@
+import type { Overwrite } from '@yarkjs/utils'
 import type { InspectColor, InspectOptions } from 'node:util'
 import type { ElementJSON } from './jsx-runtime'
-import { inspect, styleText } from 'node:util'
+import { inspect, stripVTControlCharacters, styleText } from 'node:util'
 import { Element, Fragment } from './jsx-runtime'
 
 export interface FormatOptions extends InspectOptions {
   /** Maximum number of characters of attr string values, defaults to `maxStringLength`. */
-  maxAttrStringLength?: number
-  /** Whether text children are rendered as quoted strings instead of raw text. */
-  quoteText?: boolean
+  maxAttrStringLength?: number | null
+  /** Whether text children are rendered as quoted strings instead of raw text. @default false */
+  explicitString?: boolean
+  /** Whether `true` attribute values are rendered explicitly as `=true` instead of just the attribute name. @default false */
+  explicitTrue?: boolean
   /** Optional syntax highlighter used for objects when colors are enabled. */
-  highlight?: ((code: string) => string) | null
+  customHighlight?: ((code: string) => string) | null
 }
 
 export class Formatter {
   private depth = 0
   private column = 0
-  readonly opts: Required<InspectOptions> & FormatOptions
+  readonly opts: Required<FormatOptions>
 
   get compact(): boolean {
     return typeof this.opts.compact === 'undefined' ? true
@@ -27,7 +30,7 @@ export class Formatter {
     readonly print: (str: string) => void,
     opts: FormatOptions = {},
   ) {
-    this.opts = { ...Formatter.defaultOptions, ...opts }
+    this.opts = Object.assign(Object.create(Formatter.defaultOptions), opts)
   }
 
   /** Print a chunk of output, keeping track of the current column. */
@@ -95,26 +98,26 @@ export class Formatter {
       return
     }
     this.write(this.stylize(`${json.slice(0, max)}"`, 'string'))
-    this.write(this.stylize(marker, 'special'))
+    this.write(marker)
   }
 
-  highlight(object: unknown): string {
-    if (this.opts.colors && this.opts.highlight) {
+  customHighlight(object: unknown): string {
+    if (this.opts.colors && this.opts.customHighlight) {
       const code = typeof object === 'function' ? object.toString()
         : object === undefined ? 'undefined' : JSON.stringify(object)
-      return this.opts.highlight(code)
+      return this.opts.customHighlight(code)
     }
     return inspect(object, this.opts)
   }
 
   object(object: unknown): void {
-    this.multiline(`{${this.highlight(object)}}`)
+    this.multiline(`{${this.customHighlight(object)}}`)
   }
 
   /** Print a single attr. */
   private writeAttr(key: string, value: unknown): void {
     this.write(this.stylize(key, 'attr'))
-    if (value === true)
+    if (!this.opts.explicitTrue && value === true)
       return
     this.write('=')
     if (typeof value === 'string')
@@ -194,7 +197,7 @@ export class Formatter {
     if (rest > 0) {
       if (multiline)
         nested.breakLine()
-      nested.write(this.stylize(marker, 'special'))
+      nested.write(marker)
     }
     this.column = nested.column
     return multiline
@@ -219,7 +222,7 @@ export class Formatter {
 
   /** Whether the node is rendered as plain text. */
   private isText(node: unknown): node is string {
-    return !this.opts.quoteText && typeof node === 'string'
+    return !this.opts.explicitString && typeof node === 'string'
   }
 
   /** Whether the node is rendered as whitespace-only text. */
@@ -244,16 +247,24 @@ export class Formatter {
 }
 
 export namespace Formatter {
-  export const defaultOptions: Required<InspectOptions & FormatOptions> = {
-    ...inspect.defaultOptions as Required<InspectOptions>,
-    quoteText: false,
-    maxAttrStringLength: 80,
-    highlight: null,
-  }
+  export const defaultOptions: Required<Overwrite<FormatOptions, Readonly<InspectOptions>>> =
+    Object.assign(Object.create(inspect.defaultOptions), {
+      maxAttrStringLength: null,
+      explicitString: false,
+      explicitTrue: false,
+      customHighlight: null,
+    })
 
-  /** Matches the ANSI escape sequences produced by styleText. */
-  // eslint-disable-next-line prefer-regex-literals, no-control-regex
-  const ansi = new RegExp('\\x1b\\[[0-9;]*m', 'g')
+  /**
+   * Characters that take up no space in terminals: combining marks,
+   * joiners, variation selectors and zero-width spaces.
+   */
+  export const zero = /[\p{M}\u200B-\u200F\uFEFF]/u
+
+  /** Whether a character takes up no space in terminals. */
+  export function isZero(char: string): boolean {
+    return Formatter.zero.test(char)
+  }
 
   /**
    * Characters that are rendered at double width in terminals: CJK
@@ -268,24 +279,13 @@ export namespace Formatter {
     return Formatter.wide.test(char)
   }
 
-  /**
-   * Characters that take up no space in terminals: combining marks,
-   * joiners, variation selectors and zero-width spaces.
-   */
-  export const zero = /[\p{M}\u200B-\u200F\uFEFF]/u
-
-  /** Whether a character takes up no space in terminals. */
-  export function isZero(char: string): boolean {
-    return Formatter.zero.test(char)
-  }
-
   /** Grapheme cluster segmenter, so emoji sequences count as one glyph. */
   const graphemes = new Intl.Segmenter(undefined, { granularity: 'grapheme' })
 
   /** Visible width of a string, ignoring ANSI escapes. */
   export function width(str: string): number {
     let width = 0
-    for (const { segment } of graphemes.segment(str.replace(ansi, ''))) {
+    for (const { segment } of graphemes.segment(stripVTControlCharacters(str))) {
       const char = String.fromCodePoint(segment.codePointAt(0)!)
       if (Formatter.isZero(char))
         continue
@@ -298,7 +298,6 @@ export namespace Formatter {
   }
 
   export const styles = {
-    special: 'cyan',
     string: 'green',
     attr: 'red',
     tag: 'blue',

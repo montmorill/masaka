@@ -1,6 +1,7 @@
 /* eslint-disable antfu/no-top-level-await */
 
 import { env } from 'node:process'
+import { inspect } from 'node:util'
 import { Formatter } from '@yarkjs/element'
 import { createLogger } from '@yarkjs/logger'
 import { noop } from '@yarkjs/utils'
@@ -12,9 +13,10 @@ import { QQBotWS } from './websocket'
 
 const logger = createLogger('qq')
 
-Formatter.defaultOptions.compact = false
-Formatter.defaultOptions.quoteText = true
-Formatter.defaultOptions.maxAttrStringLength = 40
+inspect.defaultOptions.compact = 4
+inspect.defaultOptions.numericSeparator = true
+Formatter.defaultOptions.explicitTrue = true
+Formatter.defaultOptions.explicitString = true
 
 logger.debug = noop
 

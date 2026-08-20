@@ -1,13 +1,13 @@
 /* eslint-disable no-console */
 
-import util, { inspect } from 'node:util'
+import { inspect } from 'node:util'
 import h from '@yarkjs/element'
 import { markdown } from '@yarkjs/markdown'
 
 // try uncomment this line!
-// util.inspect.defaultOptions.compact = false
-util.inspect.defaultOptions.colors = true
-util.inspect.defaultOptions.depth = Infinity
+// inspect.defaultOptions.compact = 2
+inspect.defaultOptions.colors = true
+inspect.defaultOptions.depth = Infinity
 
 const satori = <a href="https://satori.chat">Satori</a>
 const koishi = <a href="https://koishi.chat">Koishi</a>
