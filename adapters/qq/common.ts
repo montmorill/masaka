@@ -311,13 +311,6 @@ export const ArkTypeByName: Record<string, keyof ArkTypes> = {
   一起听歌: 'music_together',
 }
 
-/** QQ's format-line spellings of ark field keys per type, mapped to their snake_case names. */
-export const ArkFieldAliases: Record<string, Record<string, string>> = {
-  contact_card: { jumpUrl: 'jump_url' },
-  video_share: { jumpUrl: 'jump_url', sourceLogo: 'source_logo' },
-  music_together: { songId: 'song_id', inviteType: 'invite_type' },
-}
-
 export interface ArkData<T extends string = string> {
   /** 卡片消息中的用户操作提示文本 */ prompt:
   ArkTypes extends Record<T, { prompt: string }>

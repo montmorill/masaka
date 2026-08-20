@@ -42,9 +42,12 @@ export function withPrefix<
   return mapKeys(object, key => prefix + key) as any
 }
 
+export type SnakeCaseKeys<T extends Record<string, unknown>> = {
+  [K in Extract<keyof T, string> as SnakeCase<SplitWords<K>>]: T[K]
+}
+
 /** Rewrite the keys of an object to snake_case, preserving the value order. */
-export function snakeCaseKeys<T extends Record<string, any>>(obj: T):
-{ [K in Extract<keyof T, string> as SnakeCase<SplitWords<K>>]: T[K] } {
+export function snakeCaseKeys<T extends Record<string, any>>(obj: T): SnakeCaseKeys<T> {
   return mapKeys(obj, key => cases.snake(splitWords(key))) as any
 }
 
