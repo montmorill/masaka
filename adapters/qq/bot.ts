@@ -5,7 +5,7 @@ const logger = createLogger('qq')
 
 const GATEWAY_URL = 'wss://api.sgroup.qq.com/websocket'
 
-export default class QQBot {
+export class QQBot {
   protected constructor(
     public appId: string,
     public appSecret: string,
