@@ -1,5 +1,5 @@
 import type { IncomingHttpHeaders } from 'node:http'
-import type QQBot from './bot'
+import type { QQBot } from './bot'
 import { Buffer } from 'node:buffer'
 import { webcrypto } from 'node:crypto'
 import EventEmitter from 'node:events'

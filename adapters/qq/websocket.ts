@@ -1,4 +1,4 @@
-import type QQBot from './bot'
+import type { QQBot } from './bot'
 import { EventEmitter } from 'node:events'
 import { createLogger } from '@yarkjs/logger'
 import * as QQ from './common'
