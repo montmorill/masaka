@@ -76,11 +76,10 @@ export interface SessionTypes {
 export type Session = SessionTypes[keyof SessionTypes]
 
 export interface EventMap {
-  message: [Element<'message'>]
-  guild: [guild: Guild, action: 'create' | 'update' | 'delete']
-  channel: [channel: Channel, action: 'create' | 'update' | 'delete']
-  member: [member: Member, action: 'add' | 'update' | 'remove']
-  reaction: [reaction: Reaction, action: 'add' | 'remove']
-  friend: [user: User, action: 'add' | 'remove']
-  messageDelete: [message: Message, operator: User]
+  message: [action: 'create' | 'delete' | 'update', Element<'message'>, operator: User]
+  guild: [action: 'create' | 'update' | 'delete', guild: Guild, operator: Member]
+  channel: [action: 'create' | 'update' | 'delete', channel: Channel, operator: Member]
+  member: [action: 'create' | 'update' | 'delete', member: Member, operator: Member]
+  reaction: [action: 'create' | 'delete', reaction: Reaction, operator: Member]
+  friend: [action: 'create' | 'delete', user: User, operator: Member]
 }

@@ -92,11 +92,11 @@ export class QQAdapter extends EventEmitter<Universal.EventMap> {
     emitter.on('GUILD_MEMBER_UPDATE', adapt('member', 'parseGuildMemberUpdate'))
     emitter.on('GUILD_MEMBER_REMOVE', adapt('member', 'parseGuildMemberRemove'))
     emitter.on('MESSAGE_CREATE', adapt('message', 'parseGuildMessage'))
-    emitter.on('MESSAGE_DELETE', adapt('messageDelete', 'parseMessageDelete'))
+    emitter.on('MESSAGE_DELETE', adapt('message', 'parseMessageDelete'))
     emitter.on('MESSAGE_REACTION_ADD', adapt('reaction', 'parseReactionAdd'))
     emitter.on('MESSAGE_REACTION_REMOVE', adapt('reaction', 'parseReactionRemove'))
     emitter.on('DIRECT_MESSAGE_CREATE', adapt('message', 'parseGuildMessage'))
-    emitter.on('DIRECT_MESSAGE_DELETE', adapt('messageDelete', 'parseMessageDelete'))
+    emitter.on('DIRECT_MESSAGE_DELETE', adapt('message', 'parseMessageDelete'))
     emitter.on('GROUP_MEMBER_ADD', adapt('member', 'parseGroupMemberAdd'))
     emitter.on('GROUP_MEMBER_REMOVE', adapt('member', 'parseGroupMemberRemove'))
     emitter.on('C2C_MESSAGE_CREATE', adapt('message', 'parseUserMessage'))
@@ -105,7 +105,7 @@ export class QQAdapter extends EventEmitter<Universal.EventMap> {
     emitter.on('FRIEND_ADD', adapt('friend', 'parseFriendAdd'))
     emitter.on('FRIEND_DEL', adapt('friend', 'parseFriendRemove'))
     emitter.on('AT_MESSAGE_CREATE', adapt('message', 'parseGuildMessage'))
-    emitter.on('PUBLIC_MESSAGE_DELETE', adapt('messageDelete', 'parseMessageDelete'))
+    emitter.on('PUBLIC_MESSAGE_DELETE', adapt('message', 'parseMessageDelete'))
 
     const rawEvents: (keyof QQ.DispatchEvents)[] = [
       'GROUP_JOIN_REQUEST',
@@ -148,16 +148,16 @@ export class QQAdapter extends EventEmitter<Universal.EventMap> {
     }
   }
 
-  parseGuildCreate(guild: QQ.GuildEvent): Universal.EventMap['guild'] {
-    return [this.parseGuild(guild), 'create']
+  parseGuildCreate(event: QQ.GuildEvent): Universal.EventMap['guild'] {
+    return ['create', this.parseGuild(event), { id: event.op_user_id }]
   }
 
-  parseGuildUpdate(guild: QQ.GuildEvent): Universal.EventMap['guild'] {
-    return [this.parseGuild(guild), 'update']
+  parseGuildUpdate(event: QQ.GuildEvent): Universal.EventMap['guild'] {
+    return ['update', this.parseGuild(event), { id: event.op_user_id }]
   }
 
-  parseGuildDelete(guild: QQ.GuildEvent): Universal.EventMap['guild'] {
-    return [this.parseGuild(guild), 'delete']
+  parseGuildDelete(event: QQ.GuildEvent): Universal.EventMap['guild'] {
+    return ['delete', this.parseGuild(event), { id: event.op_user_id }]
   }
 
   parseGuildChannel(channel: QQ.ChannelEvent): Universal.Channel {
@@ -168,16 +168,16 @@ export class QQAdapter extends EventEmitter<Universal.EventMap> {
     }
   }
 
-  parseGuildChannelCreate(channel: QQ.ChannelEvent): Universal.EventMap['channel'] {
-    return [this.parseGuildChannel(channel), 'create']
+  parseGuildChannelCreate(event: QQ.ChannelEvent): Universal.EventMap['channel'] {
+    return ['create', this.parseGuildChannel(event), { id: event.op_user_id }]
   }
 
-  parseGuildChannelUpdate(channel: QQ.ChannelEvent): Universal.EventMap['channel'] {
-    return [this.parseGuildChannel(channel), 'update']
+  parseGuildChannelUpdate(event: QQ.ChannelEvent): Universal.EventMap['channel'] {
+    return ['update', this.parseGuildChannel(event), { id: event.op_user_id }]
   }
 
-  parseGuildChannelDelete(channel: QQ.ChannelEvent): Universal.EventMap['channel'] {
-    return [this.parseGuildChannel(channel), 'delete']
+  parseGuildChannelDelete(event: QQ.ChannelEvent): Universal.EventMap['channel'] {
+    return ['delete', this.parseGuildChannel(event), { id: event.op_user_id }]
   }
 
   parseGuildUser(user: QQ.GuildUser): Universal.User {
@@ -198,16 +198,16 @@ export class QQAdapter extends EventEmitter<Universal.EventMap> {
     }
   }
 
-  parseGuildMemberAdd(member: QQ.GuildMemberEvent): Universal.EventMap['member'] {
-    return [this.parseGuildMember(member), 'add']
+  parseGuildMemberAdd(event: QQ.GuildMemberEvent): Universal.EventMap['member'] {
+    return ['create', this.parseGuildMember(event), { id: event.op_user_id }]
   }
 
-  parseGuildMemberUpdate(member: QQ.GuildMemberEvent): Universal.EventMap['member'] {
-    return [this.parseGuildMember(member), 'update']
+  parseGuildMemberUpdate(event: QQ.GuildMemberEvent): Universal.EventMap['member'] {
+    return ['update', this.parseGuildMember(event), { id: event.op_user_id }]
   }
 
-  parseGuildMemberRemove(member: QQ.GuildMemberEvent): Universal.EventMap['member'] {
-    return [this.parseGuildMember(member), 'remove']
+  parseGuildMemberRemove(event: QQ.GuildMemberEvent): Universal.EventMap['member'] {
+    return ['delete', this.parseGuildMember(event), { id: event.op_user_id }]
   }
 
   parseGroupMember({ member_openid, group_openid }: QQ.GroupMemberEvent): Universal.Member {
@@ -217,12 +217,14 @@ export class QQAdapter extends EventEmitter<Universal.EventMap> {
     }
   }
 
-  parseGroupMemberAdd(member: QQ.GroupMemberEvent): Universal.EventMap['member'] {
-    return [this.parseGroupMember(member), 'add']
+  parseGroupMemberAdd(event: QQ.GroupMemberEvent): Universal.EventMap['member'] {
+    const member = this.parseGroupMember(event)
+    return ['create', member, member]
   }
 
-  parseGroupMemberRemove(member: QQ.GroupMemberEvent): Universal.EventMap['member'] {
-    return [this.parseGroupMember(member), 'remove']
+  parseGroupMemberRemove(event: QQ.GroupMemberEvent): Universal.EventMap['member'] {
+    const member = this.parseGroupMember(event)
+    return ['delete', member, member]
   }
 
   parseReaction({ target, emoji, user_id, guild_id, channel_id }: QQ.MessageReaction): Universal.Reaction {
@@ -243,54 +245,53 @@ export class QQAdapter extends EventEmitter<Universal.EventMap> {
   }
 
   parseReactionAdd(reaction: QQ.MessageReaction): Universal.EventMap['reaction'] {
-    return [this.parseReaction(reaction), 'add']
+    return ['create', this.parseReaction(reaction), { id: reaction.user_id }]
   }
 
   parseReactionRemove(reaction: QQ.MessageReaction): Universal.EventMap['reaction'] {
-    return [this.parseReaction(reaction), 'remove']
+    return ['delete', this.parseReaction(reaction), { id: reaction.user_id }]
   }
 
   parseFriendAdd({ openid }: QQ.FriendAdd): Universal.EventMap['friend'] {
-    return [{ id: openid }, 'add']
+    return ['create', { id: openid }, { id: openid }]
   }
 
   parseFriendRemove({ openid }: QQ.UserEvent): Universal.EventMap['friend'] {
-    return [{ id: openid }, 'remove']
+    return ['delete', { id: openid }, { id: openid }]
   }
 
-  parseMessageDelete({ message, op_user }: QQ.MessageDelete): Universal.EventMap['messageDelete'] {
-    return [
-      {
-        'id': message.id,
-        'timestamp': new Date(message.timestamp).valueOf(),
-        'qq:guild_id': message.guild_id,
-        'qq:channel_id': message.channel_id,
-      },
-      this.parseGuildUser(op_user),
-    ]
+  parseGuildMessageAuthor(message: QQ.GuildMessage): Universal.User | Universal.Member {
+    if (!message.member)
+      return this.parseGuildUser(message.author)
+    return {
+      id: message.author.id,
+      name: message.member.nick || message.author.username,
+      bot: message.author.bot,
+      guild: message.guild_id,
+      channel: message.channel_id,
+      role: message.member.roles.includes('2') ? 'admin' : message.member.roles.includes('4') ? 'owner' : 'member',
+    }
   }
 
-  parseGuildMessage(message: QQ.GuildMessage): Universal.EventMap['message'] {
-    const author = message.member
-      ? {
-        id: message.author.id,
-        name: message.member.nick || message.author.username,
-        bot: message.author.bot,
-        guild: message.guild_id,
-        channel: message.channel_id,
-        role: message.member.roles.includes('2') ? 'admin' : message.member.roles.includes('4') ? 'owner' : 'member',
-      } satisfies Universal.Member
-      : this.parseGuildUser(message.author)
+  parseGuildMessageElement(message: QQ.GuildMessage): Element<'message'> {
     const element = h.message({
       'id': message.id,
       'timestamp': new Date(message.timestamp).valueOf(),
       'qq:guild_id': message.guild_id,
       'qq:channel_id': message.channel_id,
     })
-    element.children.unshift(h.author(author))
+    element.children.unshift(h.author(this.parseGuildMessageAuthor(message)))
     const attachments = message.attachments?.map(({ url }) => h.file({ src: url })) ?? []
     element.update(message.content, ...attachments)
-    return [element]
+    return element
+  }
+
+  parseGuildMessage(message: QQ.GuildMessage): Universal.EventMap['message'] {
+    return ['create', this.parseGuildMessageElement(message), this.parseGuildMessageAuthor(message)]
+  }
+
+  parseMessageDelete(event: QQ.MessageDelete): Universal.EventMap['message'] {
+    return ['delete', this.parseGuildMessageElement(event.message), this.parseGuildUser(event.op_user)]
   }
 
   parseUser(user: QQ.User): Universal.User {
@@ -445,7 +446,7 @@ export class QQAdapter extends EventEmitter<Universal.EventMap> {
       logger.warn('unexpected C2C_MESSAGE_CREATE author.username', sender.name)
     const element = this.parseMessageContent(message)
     element.children.unshift(h.author(sender))
-    return [element]
+    return ['create', element, sender]
   }
 
   parseGroupMessage(message: QQ.GroupMessage): Universal.EventMap['message'] {
@@ -453,6 +454,6 @@ export class QQAdapter extends EventEmitter<Universal.EventMap> {
     const sender = this.parseMember(message.author, channel)
     const element = this.parseMessageContent(message)
     element.children.unshift(h.author(sender))
-    return [element]
+    return ['create', element, sender]
   }
 }
