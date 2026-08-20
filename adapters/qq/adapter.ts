@@ -47,6 +47,13 @@ declare module '@yarkjs/protocol' {
     'qq:message_type'?: QQ.MessageType
     'qq:msg_idx'?: QQ.MsgIdx
     'qq:auth_token'?: string
+    'qq:guild_id'?: string
+    'qq:channel_id'?: string
+  }
+
+  interface EventMap {
+    /** 未抽象为通用事件的平台原生下发事件 */
+    dispatch: [name: keyof QQ.DispatchEvents, data: QQ.DispatchEvents[keyof QQ.DispatchEvents], id: `${keyof QQ.DispatchEvents}:${string}`]
   }
 
   interface Quote {
@@ -75,15 +82,215 @@ export class QQAdapter extends EventEmitter<Universal.EventMap> {
     ) => (...args: A): void => // @ts-ignore
       void this.emit(eventName, ...this[parserName](...args))
 
+    emitter.on('GUILD_CREATE', adapt('guild', 'parseGuildCreate'))
+    emitter.on('GUILD_UPDATE', adapt('guild', 'parseGuildUpdate'))
+    emitter.on('GUILD_DELETE', adapt('guild', 'parseGuildDelete'))
+    emitter.on('CHANNEL_CREATE', adapt('channel', 'parseGuildChannelCreate'))
+    emitter.on('CHANNEL_UPDATE', adapt('channel', 'parseGuildChannelUpdate'))
+    emitter.on('CHANNEL_DELETE', adapt('channel', 'parseGuildChannelDelete'))
+    emitter.on('GUILD_MEMBER_ADD', adapt('member', 'parseGuildMemberAdd'))
+    emitter.on('GUILD_MEMBER_UPDATE', adapt('member', 'parseGuildMemberUpdate'))
+    emitter.on('GUILD_MEMBER_REMOVE', adapt('member', 'parseGuildMemberRemove'))
+    emitter.on('MESSAGE_CREATE', adapt('message', 'parseGuildMessage'))
+    emitter.on('MESSAGE_DELETE', adapt('messageDelete', 'parseMessageDelete'))
+    emitter.on('MESSAGE_REACTION_ADD', adapt('reaction', 'parseReactionAdd'))
+    emitter.on('MESSAGE_REACTION_REMOVE', adapt('reaction', 'parseReactionRemove'))
+    emitter.on('DIRECT_MESSAGE_CREATE', adapt('message', 'parseGuildMessage'))
+    emitter.on('DIRECT_MESSAGE_DELETE', adapt('messageDelete', 'parseMessageDelete'))
+    emitter.on('GROUP_MEMBER_ADD', adapt('member', 'parseGroupMemberAdd'))
+    emitter.on('GROUP_MEMBER_REMOVE', adapt('member', 'parseGroupMemberRemove'))
     emitter.on('C2C_MESSAGE_CREATE', adapt('message', 'parseUserMessage'))
     emitter.on('GROUP_MESSAGE_CREATE', adapt('message', 'parseGroupMessage'))
     emitter.on('GROUP_AT_MESSAGE_CREATE', adapt('message', 'parseGroupMessage'))
+    emitter.on('FRIEND_ADD', adapt('friend', 'parseFriendAdd'))
+    emitter.on('FRIEND_DEL', adapt('friend', 'parseFriendRemove'))
+    emitter.on('AT_MESSAGE_CREATE', adapt('message', 'parseGuildMessage'))
+    emitter.on('PUBLIC_MESSAGE_DELETE', adapt('messageDelete', 'parseMessageDelete'))
+
+    const rawEvents: (keyof QQ.DispatchEvents)[] = [
+      'GROUP_JOIN_REQUEST',
+      'C2C_MSG_REJECT',
+      'C2C_MSG_RECEIVE',
+      'GROUP_ADD_ROBOT',
+      'GROUP_DEL_ROBOT',
+      'GROUP_MSG_REJECT',
+      'GROUP_MSG_RECEIVE',
+      'INTERACTION_CREATE',
+      'MESSAGE_AUDIT_PASS',
+      'MESSAGE_AUDIT_REJECT',
+      'FORUM_THREAD_CREATE',
+      'FORUM_THREAD_UPDATE',
+      'FORUM_THREAD_DELETE',
+      'FORUM_POST_CREATE',
+      'FORUM_POST_DELETE',
+      'FORUM_REPLY_CREATE',
+      'FORUM_REPLY_DELETE',
+      'FORUM_PUBLISH_AUDIT_RESULT',
+      'AUDIO_START',
+      'AUDIO_FINISH',
+      'AUDIO_ON_MIC',
+      'AUDIO_OFF_MIC',
+    ]
+    for (const name of rawEvents)
+      emitter.on(name, (data, id) => this.emit('dispatch', name, data, id))
   }
 
   parseChannel(channel: { group_openid: string }): Universal.Channel {
     return {
       id: channel.group_openid,
     }
+  }
+
+  parseGuild(guild: QQ.GuildEvent): Universal.Guild {
+    return {
+      id: guild.id,
+      name: guild.name,
+    }
+  }
+
+  parseGuildCreate(guild: QQ.GuildEvent): Universal.EventMap['guild'] {
+    return [this.parseGuild(guild), 'create']
+  }
+
+  parseGuildUpdate(guild: QQ.GuildEvent): Universal.EventMap['guild'] {
+    return [this.parseGuild(guild), 'update']
+  }
+
+  parseGuildDelete(guild: QQ.GuildEvent): Universal.EventMap['guild'] {
+    return [this.parseGuild(guild), 'delete']
+  }
+
+  parseGuildChannel(channel: QQ.ChannelEvent): Universal.Channel {
+    return {
+      id: channel.id,
+      name: channel.name,
+      guild: channel.guild_id,
+    }
+  }
+
+  parseGuildChannelCreate(channel: QQ.ChannelEvent): Universal.EventMap['channel'] {
+    return [this.parseGuildChannel(channel), 'create']
+  }
+
+  parseGuildChannelUpdate(channel: QQ.ChannelEvent): Universal.EventMap['channel'] {
+    return [this.parseGuildChannel(channel), 'update']
+  }
+
+  parseGuildChannelDelete(channel: QQ.ChannelEvent): Universal.EventMap['channel'] {
+    return [this.parseGuildChannel(channel), 'delete']
+  }
+
+  parseGuildUser(user: QQ.GuildUser): Universal.User {
+    return {
+      id: user.id,
+      name: user.username,
+      bot: user.bot,
+    }
+  }
+
+  parseGuildMember({ user, nick, roles, guild_id }: QQ.GuildMemberEvent): Universal.Member {
+    return {
+      id: user.id,
+      name: nick || user.username,
+      bot: user.bot,
+      guild: guild_id,
+      role: roles.includes('2') ? 'admin' : roles.includes('4') ? 'owner' : 'member',
+    }
+  }
+
+  parseGuildMemberAdd(member: QQ.GuildMemberEvent): Universal.EventMap['member'] {
+    return [this.parseGuildMember(member), 'add']
+  }
+
+  parseGuildMemberUpdate(member: QQ.GuildMemberEvent): Universal.EventMap['member'] {
+    return [this.parseGuildMember(member), 'update']
+  }
+
+  parseGuildMemberRemove(member: QQ.GuildMemberEvent): Universal.EventMap['member'] {
+    return [this.parseGuildMember(member), 'remove']
+  }
+
+  parseGroupMember({ member_openid, group_openid }: QQ.GroupMemberEvent): Universal.Member {
+    return {
+      id: member_openid,
+      channel: group_openid,
+    }
+  }
+
+  parseGroupMemberAdd(member: QQ.GroupMemberEvent): Universal.EventMap['member'] {
+    return [this.parseGroupMember(member), 'add']
+  }
+
+  parseGroupMemberRemove(member: QQ.GroupMemberEvent): Universal.EventMap['member'] {
+    return [this.parseGroupMember(member), 'remove']
+  }
+
+  parseReaction({ target, emoji, user_id, guild_id, channel_id }: QQ.MessageReaction): Universal.Reaction {
+    const typeMap = {
+      [QQ.ReactionTargetType.Message]: 'message',
+      [QQ.ReactionTargetType.Thread]: 'thread',
+      [QQ.ReactionTargetType.Post]: 'post',
+      [QQ.ReactionTargetType.Reply]: 'reply',
+    } as const satisfies Record<QQ.ReactionTargetType, Universal.Reaction['type']>
+    return {
+      target: target.id,
+      type: typeMap[target.type],
+      user: user_id,
+      emoji: emoji.id,
+      guild: guild_id,
+      channel: channel_id,
+    }
+  }
+
+  parseReactionAdd(reaction: QQ.MessageReaction): Universal.EventMap['reaction'] {
+    return [this.parseReaction(reaction), 'add']
+  }
+
+  parseReactionRemove(reaction: QQ.MessageReaction): Universal.EventMap['reaction'] {
+    return [this.parseReaction(reaction), 'remove']
+  }
+
+  parseFriendAdd({ openid }: QQ.FriendAdd): Universal.EventMap['friend'] {
+    return [{ id: openid }, 'add']
+  }
+
+  parseFriendRemove({ openid }: QQ.UserEvent): Universal.EventMap['friend'] {
+    return [{ id: openid }, 'remove']
+  }
+
+  parseMessageDelete({ message, op_user }: QQ.MessageDelete): Universal.EventMap['messageDelete'] {
+    return [
+      {
+        'id': message.id,
+        'timestamp': new Date(message.timestamp).valueOf(),
+        'qq:guild_id': message.guild_id,
+        'qq:channel_id': message.channel_id,
+      },
+      this.parseGuildUser(op_user),
+    ]
+  }
+
+  parseGuildMessage(message: QQ.GuildMessage): Universal.EventMap['message'] {
+    const author = message.member
+      ? {
+        id: message.author.id,
+        name: message.member.nick || message.author.username,
+        bot: message.author.bot,
+        guild: message.guild_id,
+        channel: message.channel_id,
+        role: message.member.roles.includes('2') ? 'admin' : message.member.roles.includes('4') ? 'owner' : 'member',
+      } satisfies Universal.Member
+      : this.parseGuildUser(message.author)
+    const element = h.message({
+      'id': message.id,
+      'timestamp': new Date(message.timestamp).valueOf(),
+      'qq:guild_id': message.guild_id,
+      'qq:channel_id': message.channel_id,
+    })
+    element.children.unshift(h.author(author))
+    const attachments = message.attachments?.map(({ url }) => h.file({ src: url })) ?? []
+    element.update(message.content, ...attachments)
+    return [element]
   }
 
   parseUser(user: QQ.User): Universal.User {

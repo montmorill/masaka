@@ -41,8 +41,18 @@ export interface User {
 }
 
 export interface Member extends User {
-  channel: Channel['id']
+  channel?: Channel['id']
+  guild?: Guild['id']
   role?: 'owner' | 'admin' | 'member'
+}
+
+export interface Reaction {
+  /** 表态对象（消息/帖子/评论/回复）id */ target: string
+  /** 表态对象类型 */ type: 'message' | 'thread' | 'post' | 'reply'
+  /** 表态用户 */ user: User['id']
+  /** 表情 id */ emoji: string
+  /** 所在频道 */ guild?: Guild['id']
+  /** 所在子频道 */ channel?: Channel['id']
 }
 
 export interface Channel {
@@ -67,4 +77,10 @@ export type Session = SessionTypes[keyof SessionTypes]
 
 export interface EventMap {
   message: [Element<'message'>]
+  guild: [guild: Guild, action: 'create' | 'update' | 'delete']
+  channel: [channel: Channel, action: 'create' | 'update' | 'delete']
+  member: [member: Member, action: 'add' | 'update' | 'remove']
+  reaction: [reaction: Reaction, action: 'add' | 'remove']
+  friend: [user: User, action: 'add' | 'remove']
+  messageDelete: [message: Message, operator: User]
 }
