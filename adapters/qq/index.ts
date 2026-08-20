@@ -1,7 +1,7 @@
 /* eslint-disable antfu/no-top-level-await */
 
 import { env } from 'node:process'
-import { Formatter } from '@yarkjs/element/formatter'
+import { Formatter } from '@yarkjs/element'
 import { createLogger } from '@yarkjs/logger'
 import { noop } from '@yarkjs/utils'
 import { QQAdapter } from './adapter'
