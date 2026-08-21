@@ -52,11 +52,12 @@ function serializeElement(element: Element): string {
       ? `<${tag}${attr}>${children}</${tag}>`
       : `<${tag}${attr}/>`
   }
-  const custom = (id = type): string => {
-    const attr = ` id="${escapeAttr(id)}"${renderAttrs(attrs, false)}`
+  /** 平台专属等未知标签直接以自身标签名输出，属性原样保留 */
+  const direct = (tag = type): string => {
+    const attr = renderAttrs(attrs, false)
     return children
-      ? `<custom${attr}>${children}</custom>`
-      : `<custom${attr}/>`
+      ? `<${tag}${attr}>${children}</${tag}>`
+      : `<${tag}${attr}/>`
   }
 
   switch (type) {
@@ -87,14 +88,6 @@ function serializeElement(element: Element): string {
     case 'button': return standard('button')
     case 'forward': return standard('message', ' forward="true"')
     case 'message': return standard('message')
-    case 'qq:ark': return custom('qq:ark')
-    case 'qq:face': {
-      const { id, ...rest } = attrs
-      const attr = ` id="qq:face"${id === undefined ? '' : ` face_id="${escapeAttr(id)}"`}${renderAttrs(rest, false)}`
-      return children
-        ? `<custom${attr}>${children}</custom>`
-        : `<custom${attr}/>`
-    }
-    default: return custom()
+    default: return direct()
   }
 }

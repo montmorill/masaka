@@ -57,15 +57,7 @@ function parseElement(tag: string, attrs: Record<string, string>, children: Frag
     const { forward: _forward, ...rest } = attrs
     return build('forward', rest, children)
   }
-  if (tag === 'custom') {
-    const id = attrs.id ?? 'custom'
-    const { id: _id, ...rest } = attrs
-    if (id === 'qq:face' && typeof rest.face_id === 'string') {
-      const { face_id, ...others } = rest
-      return build('qq:face', { id: face_id, ...others }, children)
-    }
-    return build(id, rest, children)
-  }
+  // 其余标签（含 qq:ark/qq:face 等平台标签）直接以自身标签名构建
   return build(TAG_MAP[tag as keyof typeof TAG_MAP] ?? tag, attrs, children)
 }
 

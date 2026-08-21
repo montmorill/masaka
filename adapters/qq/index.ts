@@ -1,5 +1,7 @@
 /* eslint-disable antfu/no-top-level-await */
 
+import type EventEmitter from 'node:events'
+import type { ChannelScenes } from './guild'
 import { env } from 'node:process'
 import { Formatter } from '@yarkjs/element'
 import { createLogger } from '@yarkjs/logger'
@@ -8,6 +10,7 @@ import { noop } from '@yarkjs/utils'
 import { QQAdapter } from './adapter'
 import { QQBot } from './bot'
 import * as QQ from './common'
+import { QQGuildAdapter } from './guild'
 import { QQBotServer } from './webhook'
 import { QQBotWS } from './websocket'
 
@@ -24,7 +27,8 @@ if (!env.QQ_APP_ID || !env.QQ_APP_SECRET)
 const bot = await QQBot.create(env.QQ_APP_ID, env.QQ_APP_SECRET)
 logger.info('bot connected', bot.appId)
 
-let adapter: QQAdapter
+let selfId = bot.appId
+let emitter: EventEmitter<QQ.DispatchEventMap>
 
 if (env.QQ_SERVER_PORT) {
   const port = Number(env.QQ_SERVER_PORT)
@@ -32,18 +36,26 @@ if (env.QQ_SERVER_PORT) {
   await new Promise<void>(resolve => server.listen(port, resolve))
   logger.info('server listening on port', port)
   const me = await bot.getMe().catch(() => undefined)
-  adapter = new QQAdapter(bot, server.emitter, me?.id)
+  if (me)
+    selfId = me.id
+  emitter = server.emitter
 }
 else {
   const ws = await QQBotWS.create(bot, QQ.Intents.ALL)
   logger.info('websocket connected', ws.sessionId)
-  adapter = new QQAdapter(bot, ws, ws.user.id)
+  selfId = ws.user.id
+  emitter = ws
 }
 
+const scenes: ChannelScenes = new Map()
+const adapter = new QQAdapter(bot, emitter, selfId, scenes)
+const guildAdapter = new QQGuildAdapter(bot, emitter, selfId, scenes)
+
 adapter.on('message-created', logger.info)
+guildAdapter.on('message-created', logger.info)
 
 if (env.SATORI_PORT) {
-  const server = SatoriServer.create(adapter, {
+  const server = SatoriServer.create([adapter, guildAdapter], {
     port: Number(env.SATORI_PORT),
     token: env.SATORI_TOKEN,
   })

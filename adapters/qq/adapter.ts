@@ -2,7 +2,7 @@ import type { Element, Fragment } from '@yarkjs/element'
 import type { SatoriDriver } from '@yarkjs/satori'
 import type { SnakeCaseKeys } from '@yarkjs/utils'
 import type { QQBot } from './bot'
-import { randomUUID } from 'node:crypto'
+import type { ChannelScenes } from './guild'
 import EventEmitter from 'node:events'
 import h from '@yarkjs/element'
 import { createLogger } from '@yarkjs/logger'
@@ -10,21 +10,9 @@ import * as Satori from '@yarkjs/protocol'
 import { parseContent } from '@yarkjs/satori'
 import { snakeCaseKeys, withPrefix } from '@yarkjs/utils'
 import * as QQ from './common'
+import { QQMessageEncoder } from './encoder'
 import { parseForwardContent, transformAttachment } from './forward'
-import {
-  guildActions,
-  messageResource,
-  parseGuildCreate,
-  parseGuildDelete,
-  parseGuildMemberAdd,
-  parseGuildMemberRemove,
-  parseGuildMemberUpdate,
-  parseGuildMessage,
-  parseGuildUpdate,
-  parseMessageDelete,
-  parseReactionAdd,
-  parseReactionRemove,
-} from './guild'
+import { adaptEvent, internalEvent, messageResource } from './guild'
 
 const logger = createLogger('qq')
 
@@ -66,25 +54,11 @@ declare module '@yarkjs/element' {
   }
 }
 
-/** Satori 内容串 → QQ 文本（mention 转 <@id>/<@all>，其余元素取子文本） */
-function toQQText(fragment: Fragment): string {
-  if (typeof fragment === 'string')
-    return fragment
-  if (fragment.type === 'mention') {
-    const attrs = fragment.attrs as { everyone?: true, user?: string, channel?: string }
-    if (attrs.everyone)
-      return '<@all>'
-    if (typeof attrs.user === 'string')
-      return `<@${attrs.user}>`
-  }
-  return fragment.children.map(toQQText).join('')
-}
-
 export class QQAdapter extends EventEmitter<Satori.EventMap> implements SatoriDriver {
   platform = 'qq'
 
-  /** 观察到的 channel id → 场景，供 message.create 等 action 消歧 */
-  protected channelScenes = new Map<string, 'group' | 'guild'>()
+  /** 观察到的 channel id → 场景，供 message.create 等 action 消歧（与 qqguild 适配器共享） */
+  protected channelScenes: ChannelScenes
 
   actions: SatoriDriver['actions']
 
@@ -92,75 +66,52 @@ export class QQAdapter extends EventEmitter<Satori.EventMap> implements SatoriDr
     public bot: QQBot,
     public emitter: EventEmitter<QQ.DispatchEventMap>,
     public selfId = bot.appId,
+    scenes: ChannelScenes = new Map(),
   ) {
     super()
+    this.channelScenes = scenes
     this.actions = {
       'message.create': async ({ channel_id, guild_id, content }) => {
-        const text = toQQText(parseContent(content))
-        if (channel_id.startsWith('private:')) {
-          const result = await this.bot.sendUserMessage(channel_id.slice('private:'.length), { msg_type: QQ.MessageType.Text, content: text })
-          return { id: result.id }
-        }
-        if (guild_id === channel_id || this.channelScenes.get(channel_id) === 'group' || !/^\d+$/.test(channel_id)) {
-          const result = await this.bot.sendGroupMessage(channel_id, { msg_type: QQ.MessageType.Text, content: text })
-          return { id: result.id }
-        }
-        const result = await this.bot.sendChannelMessage(channel_id, { content: text })
-        return { id: result.id }
+        const scene = channel_id.startsWith('private:')
+          ? 'private'
+          : guild_id === channel_id || scenes.get(channel_id) === 'group' || !/^\d+$/.test(channel_id)
+            ? 'group'
+            : 'guild'
+        return await new QQMessageEncoder(this.bot, channel_id, scene)
+          .visit(parseContent(content))
+          .flush()
       },
       'message.delete': async ({ channel_id, message_id }) => {
         if (channel_id.startsWith('private:'))
           return await this.bot.recallUserMessage(channel_id.slice('private:'.length), message_id)
-        if (this.channelScenes.get(channel_id) === 'group' || !/^\d+$/.test(channel_id))
+        if (scenes.get(channel_id) === 'group' || !/^\d+$/.test(channel_id))
           return await this.bot.recallGroupMessage(channel_id, message_id)
         return await this.bot.recallChannelMessage(channel_id, message_id)
       },
       'user.get': async ({ user_id }) => ({ id: user_id }),
       'login.get': async () => ({ data: [this.getLogin()] }),
-      ...guildActions(this.bot, this.channelScenes),
     }
-    const adapt = <A extends unknown[], T extends Satori.EventType>(
-      eventName: T,
-      parser: (...args: A) => Satori.EventBody<T>,
-    ): ((...args: unknown[]) => void) => (...args) => // @ts-ignore
-      void this.emit(eventName, {
-        id: randomUUID(),
-        type: eventName,
-        platform: this.platform,
-        self_id: this.selfId,
-        timestamp: Date.now(),
-        ...parser(...(args as A)),
-      })
+    const adapt = adaptEvent(
+      // @ts-ignore
+      event => this.emit(event.type, event),
+      this.platform,
+      this.selfId,
+    )
 
-    const adaptGuildMessage = (event: QQ.GuildMessage): Satori.EventBody<'message-created'> =>
-      parseGuildMessage(event, this.channelScenes)
-
-    emitter.on('GUILD_CREATE', adapt('guild-added', parseGuildCreate))
-    emitter.on('GUILD_UPDATE', adapt('guild-updated', parseGuildUpdate))
-    emitter.on('GUILD_DELETE', adapt('guild-removed', parseGuildDelete))
-    emitter.on('GUILD_MEMBER_ADD', adapt('guild-member-added', parseGuildMemberAdd))
-    emitter.on('GUILD_MEMBER_UPDATE', adapt('guild-member-updated', parseGuildMemberUpdate))
-    emitter.on('GUILD_MEMBER_REMOVE', adapt('guild-member-removed', parseGuildMemberRemove))
     emitter.on('GROUP_MEMBER_ADD', adapt('guild-member-added', this.parseGroupMemberAdd.bind(this)))
     emitter.on('GROUP_MEMBER_REMOVE', adapt('guild-member-removed', this.parseGroupMemberRemove.bind(this)))
     emitter.on('GROUP_JOIN_REQUEST', adapt('guild-member-request', this.parseGroupJoinRequest.bind(this)))
-    emitter.on('MESSAGE_CREATE', adapt('message-created', adaptGuildMessage))
-    emitter.on('AT_MESSAGE_CREATE', adapt('message-created', adaptGuildMessage))
-    emitter.on('DIRECT_MESSAGE_CREATE', adapt('message-created', adaptGuildMessage))
-    emitter.on('MESSAGE_DELETE', adapt('message-deleted', parseMessageDelete))
-    emitter.on('DIRECT_MESSAGE_DELETE', adapt('message-deleted', parseMessageDelete))
-    emitter.on('PUBLIC_MESSAGE_DELETE', adapt('message-deleted', parseMessageDelete))
-    emitter.on('MESSAGE_REACTION_ADD', adapt('reaction-added', parseReactionAdd))
-    emitter.on('MESSAGE_REACTION_REMOVE', adapt('reaction-removed', parseReactionRemove))
     emitter.on('C2C_MESSAGE_CREATE', adapt('message-created', this.parseUserMessage.bind(this)))
     emitter.on('GROUP_AT_MESSAGE_CREATE', adapt('message-created', this.parseGroupMessage.bind(this)))
     emitter.on('GROUP_MESSAGE_CREATE', adapt('message-created', this.parseGroupMessage.bind(this)))
     emitter.on('FRIEND_ADD', adapt('friend-request', this.parseFriendAdd.bind(this)))
+    emitter.on('INTERACTION_CREATE', (data, id) => {
+      if (data.scene === 'guild')
+        return // 由 qqguild 平台处理
+      this.emit('internal', internalEvent(this.platform, this.selfId, 'INTERACTION_CREATE', data, id))
+    })
 
     const rawEvents: (keyof QQ.DispatchEvents)[] = [
-      'CHANNEL_CREATE',
-      'CHANNEL_UPDATE',
-      'CHANNEL_DELETE',
       'FRIEND_DEL',
       'C2C_MSG_REJECT',
       'C2C_MSG_RECEIVE',
@@ -168,33 +119,9 @@ export class QQAdapter extends EventEmitter<Satori.EventMap> implements SatoriDr
       'GROUP_DEL_ROBOT',
       'GROUP_MSG_REJECT',
       'GROUP_MSG_RECEIVE',
-      'INTERACTION_CREATE',
-      'MESSAGE_AUDIT_PASS',
-      'MESSAGE_AUDIT_REJECT',
-      'FORUM_THREAD_CREATE',
-      'FORUM_THREAD_UPDATE',
-      'FORUM_THREAD_DELETE',
-      'FORUM_POST_CREATE',
-      'FORUM_POST_DELETE',
-      'FORUM_REPLY_CREATE',
-      'FORUM_REPLY_DELETE',
-      'FORUM_PUBLISH_AUDIT_RESULT',
-      'AUDIO_START',
-      'AUDIO_FINISH',
-      'AUDIO_ON_MIC',
-      'AUDIO_OFF_MIC',
     ]
-    for (const name of rawEvents) {
-      emitter.on(name, (data, id) => this.emit('internal', {
-        id,
-        type: 'internal',
-        platform: this.platform,
-        self_id: this.selfId,
-        timestamp: Date.now(),
-        _type: `qq.${name.toLowerCase().replaceAll('_', '-')}`,
-        _data: data,
-      }))
-    }
+    for (const name of rawEvents)
+      emitter.on(name, (data, id) => this.emit('internal', internalEvent(this.platform, this.selfId, name, data, id)))
   }
 
   getLogin(): Satori.Login {

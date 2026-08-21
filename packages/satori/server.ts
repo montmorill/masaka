@@ -46,23 +46,26 @@ export interface SatoriServerOptions {
   token?: string
 }
 
-/** Satori 服务端：HTTP POST /v1/{action} + WebSocket /v1/events（基于 Bun.serve） */
+/** Satori 服务端：HTTP POST /v1/{action} + WebSocket /v1/events（基于 Bun.serve，可承载多平台） */
 export class SatoriServer {
   protected sessions = new Set<BunWebSocket>()
   protected ready = new WeakSet<BunWebSocket>()
   protected seq = 0
 
   protected constructor(
-    public driver: SatoriDriver,
+    public drivers: SatoriDriver[],
     public options: SatoriServerOptions = {},
     public inner: BunServer,
   ) {
-    for (const type of Satori.EventTypes)
-      driver.on(type, event => this.broadcast(event as Satori.Event))
+    for (const driver of drivers) {
+      for (const type of Satori.EventTypes)
+        driver.on(type, event => this.broadcast(event as Satori.Event))
+    }
   }
 
-  static create(driver: SatoriDriver, options: SatoriServerOptions = {}): SatoriServer {
-    const server = new SatoriServer(driver, options, undefined as unknown as BunServer)
+  static create(drivers: SatoriDriver | SatoriDriver[], options: SatoriServerOptions = {}): SatoriServer {
+    const list = Array.isArray(drivers) ? drivers : [drivers]
+    const server = new SatoriServer(list, options, undefined as unknown as BunServer)
     server.inner = Bun.serve({
       port: options.port,
       hostname: '127.0.0.1',
@@ -119,7 +122,12 @@ export class SatoriServer {
         params = request.params
         channelId = request.channel_id
       }
-      const handler = this.driver.actions[action]
+      let handler: SatoriDriver['actions'][Satori.Action] | undefined
+      for (const driver of this.drivers) {
+        handler = driver.actions[action]
+        if (handler)
+          break
+      }
       if (!handler)
         return this.json(200, { code: Satori.ErrorCode.NOT_IMPLEMENTED, message: 'NOT_IMPLEMENTED' })
       const data = await handler(params as never, channelId)
@@ -165,7 +173,7 @@ export class SatoriServer {
         this.ready.add(connection)
         connection.send(JSON.stringify({
           op: Satori.Op.Ready,
-          body: { logins: [this.driver.getLogin()], proxy_urls: [] },
+          body: { logins: this.drivers.map(driver => driver.getLogin()), proxy_urls: [] },
         } satisfies Satori.ReadySignal))
         break
       }

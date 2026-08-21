@@ -1,6 +1,8 @@
 import type { Element } from '@yarkjs/element'
 import type { SatoriDriver } from '@yarkjs/satori'
 import type { QQBot } from './bot'
+import { randomUUID } from 'node:crypto'
+import EventEmitter from 'node:events'
 import h from '@yarkjs/element'
 import * as Satori from '@yarkjs/protocol'
 import * as QQ from './common'
@@ -240,5 +242,120 @@ export function guildActions(bot: QQBot, scenes: ChannelScenes): SatoriDriver['a
       const { type, id } = parseEmoji(emoji)
       return await bot.deleteReaction(channel_id, message_id, type, id)
     },
+  }
+}
+
+/** 事件信封工厂：解析器返回资源负载，此处填充基础字段后交给 emit */
+export function adaptEvent(
+  emit: <T extends Satori.EventType>(event: Satori.Event<T>) => void,
+  platform: string,
+  selfId: string,
+) {
+  return <A extends unknown[], T extends Satori.EventType>(
+    eventName: T,
+    parser: (...args: A) => Satori.EventBody<T>,
+  ): ((...args: unknown[]) => void) => (...args) =>
+    emit({
+      id: randomUUID(),
+      type: eventName,
+      platform,
+      self_id: selfId,
+      timestamp: Date.now(),
+      ...parser(...(args as A)),
+    } as unknown as Satori.Event<T>)
+}
+
+/** 平台原生事件透传为 internal 事件 */
+export function internalEvent(
+  platform: string,
+  selfId: string,
+  name: string,
+  data: unknown,
+  id?: string,
+): Satori.Event<'internal'> {
+  return {
+    id,
+    type: 'internal',
+    platform,
+    self_id: selfId,
+    timestamp: Date.now(),
+    _type: `${platform}.${name.toLowerCase().replaceAll('_', '-')}`,
+    _data: data,
+  }
+}
+
+/** qqguild 平台适配器：旧版频道（Guild）API 的事件与 action */
+export class QQGuildAdapter extends EventEmitter<Satori.EventMap> implements SatoriDriver {
+  platform = 'guild'
+
+  actions: SatoriDriver['actions']
+
+  constructor(
+    public bot: QQBot,
+    public emitter: EventEmitter<QQ.DispatchEventMap>,
+    public selfId = bot.appId,
+    scenes: ChannelScenes = new Map(),
+  ) {
+    super()
+    this.actions = guildActions(bot, scenes)
+    const adapt = adaptEvent(
+      // @ts-ignore
+      event => this.emit(event.type, event),
+      this.platform,
+      this.selfId,
+    )
+    const adaptGuildMessage = (event: QQ.GuildMessage): Satori.EventBody<'message-created'> =>
+      parseGuildMessage(event, scenes)
+
+    emitter.on('GUILD_CREATE', adapt('guild-added', parseGuildCreate))
+    emitter.on('GUILD_UPDATE', adapt('guild-updated', parseGuildUpdate))
+    emitter.on('GUILD_DELETE', adapt('guild-removed', parseGuildDelete))
+    emitter.on('GUILD_MEMBER_ADD', adapt('guild-member-added', parseGuildMemberAdd))
+    emitter.on('GUILD_MEMBER_UPDATE', adapt('guild-member-updated', parseGuildMemberUpdate))
+    emitter.on('GUILD_MEMBER_REMOVE', adapt('guild-member-removed', parseGuildMemberRemove))
+    emitter.on('MESSAGE_CREATE', adapt('message-created', adaptGuildMessage))
+    emitter.on('AT_MESSAGE_CREATE', adapt('message-created', adaptGuildMessage))
+    emitter.on('DIRECT_MESSAGE_CREATE', adapt('message-created', adaptGuildMessage))
+    emitter.on('MESSAGE_DELETE', adapt('message-deleted', parseMessageDelete))
+    emitter.on('DIRECT_MESSAGE_DELETE', adapt('message-deleted', parseMessageDelete))
+    emitter.on('PUBLIC_MESSAGE_DELETE', adapt('message-deleted', parseMessageDelete))
+    emitter.on('MESSAGE_REACTION_ADD', adapt('reaction-added', parseReactionAdd))
+    emitter.on('MESSAGE_REACTION_REMOVE', adapt('reaction-removed', parseReactionRemove))
+    emitter.on('INTERACTION_CREATE', (data, id) => {
+      if (data.scene !== 'guild')
+        return
+      this.emit('internal', internalEvent(this.platform, this.selfId, 'INTERACTION_CREATE', data, id))
+    })
+
+    const rawEvents: (keyof QQ.DispatchEvents)[] = [
+      'CHANNEL_CREATE',
+      'CHANNEL_UPDATE',
+      'CHANNEL_DELETE',
+      'MESSAGE_AUDIT_PASS',
+      'MESSAGE_AUDIT_REJECT',
+      'FORUM_THREAD_CREATE',
+      'FORUM_THREAD_UPDATE',
+      'FORUM_THREAD_DELETE',
+      'FORUM_POST_CREATE',
+      'FORUM_POST_DELETE',
+      'FORUM_REPLY_CREATE',
+      'FORUM_REPLY_DELETE',
+      'FORUM_PUBLISH_AUDIT_RESULT',
+      'AUDIO_START',
+      'AUDIO_FINISH',
+      'AUDIO_ON_MIC',
+      'AUDIO_OFF_MIC',
+    ]
+    for (const name of rawEvents)
+      emitter.on(name, (data, id) => this.emit('internal', internalEvent(this.platform, this.selfId, name, data, id)))
+  }
+
+  getLogin(): Satori.Login {
+    return {
+      user: { id: this.selfId },
+      self_id: this.selfId,
+      platform: this.platform,
+      status: Satori.LoginStatus.Online,
+    }
   }
 }
