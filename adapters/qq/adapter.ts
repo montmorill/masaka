@@ -1,10 +1,13 @@
-import type { Element, Fragment } from '@yarkjs/element'
-import type * as Universal from '@yarkjs/protocol'
+import type { Fragment } from '@yarkjs/element'
+import type { SatoriDriver } from '@yarkjs/satori'
 import type { SnakeCaseKeys } from '@yarkjs/utils'
 import type { QQBot } from './bot'
+import { randomUUID } from 'node:crypto'
 import EventEmitter from 'node:events'
-import h from '@yarkjs/element'
+import h, { Element } from '@yarkjs/element'
 import { createLogger } from '@yarkjs/logger'
+import * as Satori from '@yarkjs/protocol'
+import { parseContent, serialize } from '@yarkjs/satori'
 import { snakeCaseKeys, withPrefix } from '@yarkjs/utils'
 import * as QQ from './common'
 import { parseForwardContent, transformAttachment } from './forward'
@@ -19,11 +22,9 @@ export type Ark<T extends string = string, Data extends QQ.ArkData = QQ.ArkData<
 
 export interface QQElements {
   'qq:ark': Ark
-  'qq:face': {
-    type: number
-    id: string
-  }
+  'qq:face': { type: number, id: string }
 }
+
 declare module '@yarkjs/element' {
   interface Elements extends QQElements {
     image: {
@@ -35,80 +36,174 @@ declare module '@yarkjs/element' {
       'qq:voice_wav_url': string
       'qq:asr_refer_text': string
     }
+    message: {
+      'qq:message_type'?: QQ.MessageType
+      'qq:msg_idx'?: QQ.MsgIdx
+      'qq:auth_token'?: string
+      'qq:guild_id'?: string
+      'qq:channel_id'?: string
+    }
+    quote: {
+      'qq:msg_idx'?: QQ.RefMsgIdx
+    }
+    forward: {
+      'qq:title'?: string
+    }
   }
 }
 
-declare module '@yarkjs/protocol' {
-  interface User {
-    bot?: boolean
+/** Satori 内容串 → QQ 文本（mention 转 <@id>/<@all>，其余元素取子文本） */
+function toQQText(fragment: Fragment): string {
+  if (typeof fragment === 'string')
+    return fragment
+  if (fragment.type === 'mention') {
+    const attrs = fragment.attrs as { everyone?: true, user?: string, channel?: string }
+    if (attrs.everyone)
+      return '<@all>'
+    if (typeof attrs.user === 'string')
+      return `<@${attrs.user}>`
   }
-
-  interface Message {
-    'qq:message_type'?: QQ.MessageType
-    'qq:msg_idx'?: QQ.MsgIdx
-    'qq:auth_token'?: string
-    'qq:guild_id'?: string
-    'qq:channel_id'?: string
-  }
-
-  interface EventMap {
-    /** 未抽象为通用事件的平台原生下发事件 */
-    dispatch: [name: keyof QQ.DispatchEvents, data: QQ.DispatchEvents[keyof QQ.DispatchEvents], id: `${keyof QQ.DispatchEvents}:${string}`]
-  }
-
-  interface Quote {
-    'qq:msg_idx'?: QQ.RefMsgIdx
-  }
-
-  interface Forward {
-    /** Original title line of the record, e.g. `[群聊的聊天记录]`. */
-    'qq:title'?: string
-  }
+  return fragment.children.map(toQQText).join('')
 }
 
-export class QQAdapter extends EventEmitter<Universal.EventMap> {
+export class QQAdapter extends EventEmitter<Satori.EventMap> implements SatoriDriver {
+  platform = 'qq'
+
+  /** 观察到的 channel id → 场景，供 message.create 等 action 消歧 */
+  protected channelScenes = new Map<string, 'group' | 'guild'>()
+
+  actions: SatoriDriver['actions'] = {
+    'message.create': async ({ channel_id, guild_id, content }) => {
+      const text = toQQText(parseContent(content))
+      if (channel_id.startsWith('private:')) {
+        const result = await this.bot.sendUserMessage(channel_id.slice('private:'.length), { msg_type: QQ.MessageType.Text, content: text })
+        return { id: result.id }
+      }
+      if (guild_id === channel_id || this.channelScenes.get(channel_id) === 'group' || !/^\d+$/.test(channel_id)) {
+        const result = await this.bot.sendGroupMessage(channel_id, { msg_type: QQ.MessageType.Text, content: text })
+        return { id: result.id }
+      }
+      const result = await this.bot.sendChannelMessage(channel_id, { content: text })
+      return { id: result.id }
+    },
+    'message.delete': async ({ channel_id, message_id }) => {
+      if (channel_id.startsWith('private:'))
+        return await this.bot.recallUserMessage(channel_id.slice('private:'.length), message_id)
+      if (this.channelScenes.get(channel_id) === 'group' || !/^\d+$/.test(channel_id))
+        return await this.bot.recallGroupMessage(channel_id, message_id)
+      return await this.bot.recallChannelMessage(channel_id, message_id)
+    },
+    'channel.get': async ({ channel_id }) => {
+      if (channel_id.startsWith('private:'))
+        return { id: channel_id, type: Satori.ChannelType.Direct }
+      const channel = await this.bot.getChannel(channel_id)
+      return this.mapGuildChannel(channel)
+    },
+    'channel.list': async ({ guild_id }) => {
+      const channels = await this.bot.getChannels(guild_id)
+      return { data: channels.map(channel => this.mapGuildChannel(channel)) }
+    },
+    'guild.get': async ({ guild_id }) => {
+      if (this.channelScenes.get(guild_id) === 'group') {
+        const info = await this.bot.getGroupInfo(guild_id)
+        return { id: info.group_openid, name: info.group_name }
+      }
+      const guild = await this.bot.getGuild(guild_id)
+      return { id: guild.id, name: guild.name, avatar: guild.icon }
+    },
+    'guild.member.get': async ({ guild_id, user_id }) => {
+      if (this.channelScenes.get(guild_id) === 'group') {
+        const member = await this.bot.getGroupMember(guild_id, user_id)
+        return { user: { id: member.member_openid, name: member.username, is_bot: member.bot } }
+      }
+      return this.mapGuildMember(await this.bot.getMember(guild_id, user_id))
+    },
+    'guild.member.list': async ({ guild_id }) => {
+      const members = await this.bot.getMembers(guild_id)
+      return { data: members.map(member => this.mapGuildMember(member)) }
+    },
+    'guild.member.kick': async ({ guild_id, user_id }) => {
+      return await this.bot.deleteMember(guild_id, user_id)
+    },
+    'guild.member.role.set': async ({ guild_id, user_id, role_id }) => {
+      return await this.bot.addMemberRole(guild_id, user_id, role_id)
+    },
+    'guild.member.role.unset': async ({ guild_id, user_id, role_id }) => {
+      return await this.bot.deleteMemberRole(guild_id, user_id, role_id)
+    },
+    'guild.role.list': async ({ guild_id }) => {
+      const { roles } = await this.bot.getRoles(guild_id)
+      return { data: roles.map(role => ({ id: role.id, name: role.name, color: role.color })) }
+    },
+    'guild.role.create': async ({ guild_id, data }) => {
+      const { role } = await this.bot.createRole(guild_id, { name: data.name, color: data.color })
+      return { id: role.id, name: role.name, color: role.color }
+    },
+    'guild.role.update': async ({ guild_id, role_id, data }) => {
+      const { role } = await this.bot.patchRole(guild_id, role_id, { name: data.name, color: data.color })
+      return { id: role.id, name: role.name, color: role.color }
+    },
+    'guild.role.delete': async ({ guild_id, role_id }) => {
+      return await this.bot.deleteRole(guild_id, role_id)
+    },
+    'reaction.create': async ({ channel_id, message_id, emoji }) => {
+      const { type, id } = this.parseEmoji(emoji)
+      return await this.bot.addReaction(channel_id, message_id, type, id)
+    },
+    'reaction.delete': async ({ channel_id, message_id, emoji }) => {
+      const { type, id } = this.parseEmoji(emoji)
+      return await this.bot.deleteReaction(channel_id, message_id, type, id)
+    },
+    'user.get': async ({ user_id }) => ({ id: user_id }),
+    'login.get': async () => ({ data: [this.getLogin()] }),
+  }
+
   constructor(
     public bot: QQBot,
     public emitter: EventEmitter<QQ.DispatchEventMap>,
+    public selfId = bot.appId,
   ) {
     super()
-    const adapt = <
-      A extends unknown[],
-      T extends keyof Universal.EventMap,
-      P extends keyof QQAdapter,
-    >(
+    const adapt = <T extends Satori.EventType>(
       eventName: T,
-      parserName: QQAdapter[P] extends (...args: A) => Universal.EventMap[T] ? P : never,
-    ) => (...args: A): void => // @ts-ignore
-      void this.emit(eventName, ...this[parserName](...args))
+      parserName: keyof QQAdapter,
+    ): ((...args: unknown[]) => void) => (...args) => // @ts-ignore
+      void this.emit(eventName, {
+        id: randomUUID(),
+        type: eventName,
+        platform: this.platform,
+        self_id: this.selfId,
+        timestamp: Date.now(),
+        ...(this[parserName] as (...args: unknown[]) => Satori.EventBody<T>)(...args),
+      })
 
-    emitter.on('GUILD_CREATE', adapt('guild', 'parseGuildCreate'))
-    emitter.on('GUILD_UPDATE', adapt('guild', 'parseGuildUpdate'))
-    emitter.on('GUILD_DELETE', adapt('guild', 'parseGuildDelete'))
-    emitter.on('CHANNEL_CREATE', adapt('channel', 'parseGuildChannelCreate'))
-    emitter.on('CHANNEL_UPDATE', adapt('channel', 'parseGuildChannelUpdate'))
-    emitter.on('CHANNEL_DELETE', adapt('channel', 'parseGuildChannelDelete'))
-    emitter.on('GUILD_MEMBER_ADD', adapt('member', 'parseGuildMemberAdd'))
-    emitter.on('GUILD_MEMBER_UPDATE', adapt('member', 'parseGuildMemberUpdate'))
-    emitter.on('GUILD_MEMBER_REMOVE', adapt('member', 'parseGuildMemberRemove'))
-    emitter.on('MESSAGE_CREATE', adapt('message', 'parseGuildMessage'))
-    emitter.on('MESSAGE_DELETE', adapt('message', 'parseMessageDelete'))
-    emitter.on('MESSAGE_REACTION_ADD', adapt('reaction', 'parseReactionAdd'))
-    emitter.on('MESSAGE_REACTION_REMOVE', adapt('reaction', 'parseReactionRemove'))
-    emitter.on('DIRECT_MESSAGE_CREATE', adapt('message', 'parseGuildMessage'))
-    emitter.on('DIRECT_MESSAGE_DELETE', adapt('message', 'parseMessageDelete'))
-    emitter.on('GROUP_MEMBER_ADD', adapt('member', 'parseGroupMemberAdd'))
-    emitter.on('GROUP_MEMBER_REMOVE', adapt('member', 'parseGroupMemberRemove'))
-    emitter.on('C2C_MESSAGE_CREATE', adapt('message', 'parseUserMessage'))
-    emitter.on('GROUP_MESSAGE_CREATE', adapt('message', 'parseGroupMessage'))
-    emitter.on('GROUP_AT_MESSAGE_CREATE', adapt('message', 'parseGroupMessage'))
-    emitter.on('FRIEND_ADD', adapt('friend', 'parseFriendAdd'))
-    emitter.on('FRIEND_DEL', adapt('friend', 'parseFriendRemove'))
-    emitter.on('AT_MESSAGE_CREATE', adapt('message', 'parseGuildMessage'))
-    emitter.on('PUBLIC_MESSAGE_DELETE', adapt('message', 'parseMessageDelete'))
+    emitter.on('GUILD_CREATE', adapt('guild-added', 'parseGuildCreate'))
+    emitter.on('GUILD_UPDATE', adapt('guild-updated', 'parseGuildUpdate'))
+    emitter.on('GUILD_DELETE', adapt('guild-removed', 'parseGuildDelete'))
+    emitter.on('GUILD_MEMBER_ADD', adapt('guild-member-added', 'parseGuildMemberAdd'))
+    emitter.on('GUILD_MEMBER_UPDATE', adapt('guild-member-updated', 'parseGuildMemberUpdate'))
+    emitter.on('GUILD_MEMBER_REMOVE', adapt('guild-member-removed', 'parseGuildMemberRemove'))
+    emitter.on('GROUP_MEMBER_ADD', adapt('guild-member-added', 'parseGroupMemberAdd'))
+    emitter.on('GROUP_MEMBER_REMOVE', adapt('guild-member-removed', 'parseGroupMemberRemove'))
+    emitter.on('GROUP_JOIN_REQUEST', adapt('guild-member-request', 'parseGroupJoinRequest'))
+    emitter.on('MESSAGE_CREATE', adapt('message-created', 'parseGuildMessage'))
+    emitter.on('AT_MESSAGE_CREATE', adapt('message-created', 'parseGuildMessage'))
+    emitter.on('DIRECT_MESSAGE_CREATE', adapt('message-created', 'parseGuildMessage'))
+    emitter.on('MESSAGE_DELETE', adapt('message-deleted', 'parseMessageDelete'))
+    emitter.on('DIRECT_MESSAGE_DELETE', adapt('message-deleted', 'parseMessageDelete'))
+    emitter.on('PUBLIC_MESSAGE_DELETE', adapt('message-deleted', 'parseMessageDelete'))
+    emitter.on('MESSAGE_REACTION_ADD', adapt('reaction-added', 'parseReactionAdd'))
+    emitter.on('MESSAGE_REACTION_REMOVE', adapt('reaction-removed', 'parseReactionRemove'))
+    emitter.on('C2C_MESSAGE_CREATE', adapt('message-created', 'parseUserMessage'))
+    emitter.on('GROUP_AT_MESSAGE_CREATE', adapt('message-created', 'parseGroupMessage'))
+    emitter.on('GROUP_MESSAGE_CREATE', adapt('message-created', 'parseGroupMessage'))
+    emitter.on('FRIEND_ADD', adapt('friend-request', 'parseFriendAdd'))
 
     const rawEvents: (keyof QQ.DispatchEvents)[] = [
-      'GROUP_JOIN_REQUEST',
+      'CHANNEL_CREATE',
+      'CHANNEL_UPDATE',
+      'CHANNEL_DELETE',
+      'FRIEND_DEL',
       'C2C_MSG_REJECT',
       'C2C_MSG_RECEIVE',
       'GROUP_ADD_ROBOT',
@@ -131,145 +226,182 @@ export class QQAdapter extends EventEmitter<Universal.EventMap> {
       'AUDIO_ON_MIC',
       'AUDIO_OFF_MIC',
     ]
-    for (const name of rawEvents)
-      emitter.on(name, (data, id) => this.emit('dispatch', name, data, id))
-  }
-
-  parseChannel(channel: { group_openid: string }): Universal.Channel {
-    return {
-      id: channel.group_openid,
+    for (const name of rawEvents) {
+      emitter.on(name, (data, id) => this.emit('internal', {
+        id,
+        type: 'internal',
+        platform: this.platform,
+        self_id: this.selfId,
+        timestamp: Date.now(),
+        _type: `qq.${name.toLowerCase().replaceAll('_', '-')}`,
+        _data: data,
+      }))
     }
   }
 
-  parseGuild(guild: QQ.GuildEvent): Universal.Guild {
+  getLogin(): Satori.Login {
+    return {
+      user: { id: this.selfId },
+      self_id: this.selfId,
+      platform: this.platform,
+      status: Satori.LoginStatus.Online,
+    }
+  }
+
+  /** QQ 频道类型 → Satori 频道类型 */
+  protected mapChannelType(type: number): Satori.ChannelType {
+    if (type === 2 || type === 3)
+      return Satori.ChannelType.Voice
+    if (type === 4)
+      return Satori.ChannelType.Category
+    return Satori.ChannelType.Text
+  }
+
+  protected mapGuildChannel(channel: QQ.Channel): Satori.Channel {
+    return {
+      id: channel.id,
+      type: this.mapChannelType(channel.type),
+      name: channel.name,
+      parent_id: channel.parent_id,
+    }
+  }
+
+  protected mapGuildMember(member: QQ.GuildMember): Satori.GuildMember {
+    return {
+      user: this.parseGuildUser(member.user),
+      nick: member.nick,
+      joined_at: Date.parse(member.joined_at),
+      roles: member.roles.map(id => ({ id })),
+    }
+  }
+
+  protected parseEmoji(emoji: string | Satori.Emoji): { type: QQ.EmojiType, id: string } {
+    const id = typeof emoji === 'string' ? emoji : emoji.id ?? emoji.name ?? ''
+    return {
+      type: /^\d+$/.test(id) ? QQ.EmojiType.System : QQ.EmojiType.Emoji,
+      id,
+    }
+  }
+
+  parseGuild(guild: QQ.GuildEvent): Satori.Guild {
     return {
       id: guild.id,
       name: guild.name,
+      avatar: guild.icon,
     }
   }
 
-  parseGuildCreate(event: QQ.GuildEvent): Universal.EventMap['guild'] {
-    return ['create', this.parseGuild(event), { id: event.op_user_id }]
+  parseGuildCreate(event: QQ.GuildEvent): Satori.EventBody<'guild-added'> {
+    return { guild: this.parseGuild(event), operator: { id: event.op_user_id } }
   }
 
-  parseGuildUpdate(event: QQ.GuildEvent): Universal.EventMap['guild'] {
-    return ['update', this.parseGuild(event), { id: event.op_user_id }]
+  parseGuildUpdate(event: QQ.GuildEvent): Satori.EventBody<'guild-updated'> {
+    return { guild: this.parseGuild(event), operator: { id: event.op_user_id } }
   }
 
-  parseGuildDelete(event: QQ.GuildEvent): Universal.EventMap['guild'] {
-    return ['delete', this.parseGuild(event), { id: event.op_user_id }]
+  parseGuildDelete(event: QQ.GuildEvent): Satori.EventBody<'guild-removed'> {
+    return { guild: this.parseGuild(event), operator: { id: event.op_user_id } }
   }
 
-  parseGuildChannel(channel: QQ.ChannelEvent): Universal.Channel {
-    return {
-      id: channel.id,
-      name: channel.name,
-      guild: channel.guild_id,
-    }
-  }
-
-  parseGuildChannelCreate(event: QQ.ChannelEvent): Universal.EventMap['channel'] {
-    return ['create', this.parseGuildChannel(event), { id: event.op_user_id }]
-  }
-
-  parseGuildChannelUpdate(event: QQ.ChannelEvent): Universal.EventMap['channel'] {
-    return ['update', this.parseGuildChannel(event), { id: event.op_user_id }]
-  }
-
-  parseGuildChannelDelete(event: QQ.ChannelEvent): Universal.EventMap['channel'] {
-    return ['delete', this.parseGuildChannel(event), { id: event.op_user_id }]
-  }
-
-  parseGuildUser(user: QQ.GuildUser): Universal.User {
+  parseGuildUser(user: QQ.GuildUser): Satori.User {
     return {
       id: user.id,
       name: user.username,
-      bot: user.bot,
+      avatar: user.avatar,
+      is_bot: user.bot,
     }
   }
 
-  parseGuildMember({ user, nick, roles, guild_id }: QQ.GuildMemberEvent): Universal.Member {
+  parseGuildMember(event: QQ.GuildMemberEvent): Satori.GuildMember {
     return {
-      id: user.id,
-      name: nick || user.username,
-      bot: user.bot,
-      guild: guild_id,
-      role: roles.includes('2') ? 'admin' : roles.includes('4') ? 'owner' : 'member',
+      user: this.parseGuildUser(event.user),
+      nick: event.nick,
+      joined_at: Date.parse(event.joined_at),
+      roles: event.roles.map(id => ({ id })),
     }
   }
 
-  parseGuildMemberAdd(event: QQ.GuildMemberEvent): Universal.EventMap['member'] {
-    return ['create', this.parseGuildMember(event), { id: event.op_user_id }]
+  parseGuildMemberAdd(event: QQ.GuildMemberEvent): Satori.EventBody<'guild-member-added'> {
+    return { guild: { id: event.guild_id }, member: this.parseGuildMember(event), operator: { id: event.op_user_id } }
   }
 
-  parseGuildMemberUpdate(event: QQ.GuildMemberEvent): Universal.EventMap['member'] {
-    return ['update', this.parseGuildMember(event), { id: event.op_user_id }]
+  parseGuildMemberUpdate(event: QQ.GuildMemberEvent): Satori.EventBody<'guild-member-updated'> {
+    return { guild: { id: event.guild_id }, member: this.parseGuildMember(event), operator: { id: event.op_user_id } }
   }
 
-  parseGuildMemberRemove(event: QQ.GuildMemberEvent): Universal.EventMap['member'] {
-    return ['delete', this.parseGuildMember(event), { id: event.op_user_id }]
+  parseGuildMemberRemove(event: QQ.GuildMemberEvent): Satori.EventBody<'guild-member-removed'> {
+    return { guild: { id: event.guild_id }, member: this.parseGuildMember(event), operator: { id: event.op_user_id } }
   }
 
-  parseGroupMember({ member_openid, group_openid }: QQ.GroupMemberEvent): Universal.Member {
+  parseGroupMember({ member_openid }: QQ.GroupMemberEvent): Satori.GuildMember {
+    return { user: { id: member_openid } }
+  }
+
+  parseGroupMemberAdd(event: QQ.GroupMemberEvent): Satori.EventBody<'guild-member-added'> {
+    return { guild: { id: event.group_openid }, member: this.parseGroupMember(event) }
+  }
+
+  parseGroupMemberRemove(event: QQ.GroupMemberEvent): Satori.EventBody<'guild-member-removed'> {
+    return { guild: { id: event.group_openid }, member: this.parseGroupMember(event) }
+  }
+
+  parseGroupJoinRequest(event: QQ.GroupJoinRequest): Satori.EventBody<'guild-member-request'> {
     return {
-      id: member_openid,
-      channel: group_openid,
+      guild: { id: event.group_openid },
+      member: {
+        user: { id: event.member_openid, name: event.username, is_bot: event.bot },
+        nick: event.username,
+        joined_at: Date.parse(event.apply_at),
+      },
     }
   }
 
-  parseGroupMemberAdd(event: QQ.GroupMemberEvent): Universal.EventMap['member'] {
-    const member = this.parseGroupMember(event)
-    return ['create', member, member]
+  parseReaction({ target, emoji }: QQ.MessageReaction): Satori.Reaction {
+    return { message: { id: target.id }, emoji: { id: emoji.id } }
   }
 
-  parseGroupMemberRemove(event: QQ.GroupMemberEvent): Universal.EventMap['member'] {
-    const member = this.parseGroupMember(event)
-    return ['delete', member, member]
-  }
-
-  parseReaction({ target, emoji, user_id, guild_id, channel_id }: QQ.MessageReaction): Universal.Reaction {
-    const typeMap = {
-      [QQ.ReactionTargetType.Message]: 'message',
-      [QQ.ReactionTargetType.Thread]: 'thread',
-      [QQ.ReactionTargetType.Post]: 'post',
-      [QQ.ReactionTargetType.Reply]: 'reply',
-    } as const satisfies Record<QQ.ReactionTargetType, Universal.Reaction['type']>
+  parseReactionAdd(reaction: QQ.MessageReaction): Satori.EventBody<'reaction-added'> {
     return {
-      target: target.id,
-      type: typeMap[target.type],
-      user: user_id,
-      emoji: emoji.id,
-      guild: guild_id,
-      channel: channel_id,
+      reaction: this.parseReaction(reaction),
+      channel: { id: reaction.channel_id },
+      guild: { id: reaction.guild_id },
+      user: { id: reaction.user_id },
     }
   }
 
-  parseReactionAdd(reaction: QQ.MessageReaction): Universal.EventMap['reaction'] {
-    return ['create', this.parseReaction(reaction), { id: reaction.user_id }]
+  parseReactionRemove(reaction: QQ.MessageReaction): Satori.EventBody<'reaction-removed'> {
+    return {
+      reaction: this.parseReaction(reaction),
+      channel: { id: reaction.channel_id },
+      guild: { id: reaction.guild_id },
+      user: { id: reaction.user_id },
+    }
   }
 
-  parseReactionRemove(reaction: QQ.MessageReaction): Universal.EventMap['reaction'] {
-    return ['delete', this.parseReaction(reaction), { id: reaction.user_id }]
+  parseFriendAdd({ openid }: QQ.FriendAdd): Satori.EventBody<'friend-request'> {
+    return { user: { id: openid } }
   }
 
-  parseFriendAdd({ openid }: QQ.FriendAdd): Universal.EventMap['friend'] {
-    return ['create', { id: openid }, { id: openid }]
+  /** 剥离顶层 author 子元素（其信息由事件 user/member 承载）后序列化消息内容 */
+  protected messageResource(element: Element<'message'>, edited?: string): Satori.Message {
+    return {
+      id: element.attrs.id,
+      content: element.children
+        .filter(child => !(child instanceof Element && child.type === 'author'))
+        .map(serialize)
+        .join(''),
+      created_at: element.attrs.timestamp,
+      updated_at: edited === undefined ? undefined : Date.parse(edited),
+    }
   }
 
-  parseFriendRemove({ openid }: QQ.UserEvent): Universal.EventMap['friend'] {
-    return ['delete', { id: openid }, { id: openid }]
-  }
-
-  parseGuildMessageAuthor(message: QQ.GuildMessage): Universal.User | Universal.Member {
+  parseGuildMessageAuthor(message: QQ.GuildMessage): Satori.User {
+    const user = this.parseGuildUser(message.author)
     if (!message.member)
-      return this.parseGuildUser(message.author)
+      return user
     return {
-      id: message.author.id,
-      name: message.member.nick || message.author.username,
-      bot: message.author.bot,
-      guild: message.guild_id,
-      channel: message.channel_id,
-      role: message.member.roles.includes('2') ? 'admin' : message.member.roles.includes('4') ? 'owner' : 'member',
+      ...user,
+      name: message.member.nick || user.name,
     }
   }
 
@@ -286,27 +418,47 @@ export class QQAdapter extends EventEmitter<Universal.EventMap> {
     return element
   }
 
-  parseGuildMessage(message: QQ.GuildMessage): Universal.EventMap['message'] {
-    return ['create', this.parseGuildMessageElement(message), this.parseGuildMessageAuthor(message)]
-  }
-
-  parseMessageDelete(event: QQ.MessageDelete): Universal.EventMap['message'] {
-    return ['delete', this.parseGuildMessageElement(event.message), this.parseGuildUser(event.op_user)]
-  }
-
-  parseUser(user: QQ.User): Universal.User {
+  parseGuildMessage(message: QQ.GuildMessage): Satori.EventBody<'message-created'> {
+    const element = this.parseGuildMessageElement(message)
+    this.channelScenes.set(message.channel_id, 'guild')
+    const user = this.parseGuildUser(message.author)
     return {
-      id: user.id,
-      name: user.username,
-      bot: user.bot,
+      message: this.messageResource(element, message.edited_timestamp),
+      channel: { id: message.channel_id },
+      guild: { id: message.guild_id },
+      user,
+      member: message.member
+        ? {
+            user,
+            nick: message.member.nick,
+            joined_at: Date.parse(message.member.joined_at),
+            roles: message.member.roles.map(id => ({ id })),
+          }
+        : undefined,
     }
   }
 
-  parseMember(member: QQ.Member, channel: Universal.Channel): Universal.Member {
+  parseMessageDelete(event: QQ.MessageDelete): Satori.EventBody<'message-deleted'> {
     return {
-      ...this.parseUser(member),
-      role: member.member_role,
-      channel: channel.id,
+      message: { id: event.message.id },
+      channel: { id: event.message.channel_id },
+      guild: { id: event.message.guild_id },
+      operator: this.parseGuildUser(event.op_user),
+    }
+  }
+
+  parseUser(user: QQ.User): Satori.User {
+    return {
+      id: user.id,
+      name: user.username,
+      is_bot: user.bot,
+    }
+  }
+
+  parseMember(member: QQ.Member): Satori.GuildMember {
+    return {
+      user: this.parseUser(member),
+      nick: member.username,
     }
   }
 
@@ -438,7 +590,7 @@ export class QQAdapter extends EventEmitter<Universal.EventMap> {
     return element
   }
 
-  parseUserMessage(message: QQ.Message): Universal.EventMap['message'] {
+  parseUserMessage(message: QQ.Message): Satori.EventBody<'message-created'> {
     const sender = this.parseUser(message.author)
     if (sender.name === '')
       delete sender.name
@@ -446,14 +598,24 @@ export class QQAdapter extends EventEmitter<Universal.EventMap> {
       logger.warn('unexpected C2C_MESSAGE_CREATE author.username', sender.name)
     const element = this.parseMessageContent(message)
     element.children.unshift(h.author(sender))
-    return ['create', element, sender]
+    return {
+      message: this.messageResource(element),
+      channel: { id: `private:${message.author.id}`, type: Satori.ChannelType.Direct },
+      user: sender,
+    }
   }
 
-  parseGroupMessage(message: QQ.GroupMessage): Universal.EventMap['message'] {
-    const channel = this.parseChannel(message)
-    const sender = this.parseMember(message.author, channel)
+  parseGroupMessage(message: QQ.GroupMessage): Satori.EventBody<'message-created'> {
+    const member = this.parseMember(message.author)
     const element = this.parseMessageContent(message)
-    element.children.unshift(h.author(sender))
-    return ['create', element, sender]
+    element.children.unshift(h.author(member))
+    this.channelScenes.set(message.group_openid, 'group')
+    return {
+      message: this.messageResource(element),
+      channel: { id: message.group_openid, type: Satori.ChannelType.Text },
+      guild: { id: message.group_openid },
+      member,
+      user: member.user,
+    }
   }
 }

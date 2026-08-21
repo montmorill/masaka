@@ -1,12 +1,10 @@
 {
-  "name": "@yarkjs/adapter-qq",
+  "name": "@yarkjs/satori",
   "type": "module",
   "version": "0.0.0",
   "dependencies": {
     "@yarkjs/element": "workspace:^",
     "@yarkjs/logger": "workspace:^",
-    "@yarkjs/protocol": "workspace:^",
-    "@yarkjs/satori": "workspace:^",
-    "@yarkjs/utils": "workspace:^"
+    "@yarkjs/protocol": "workspace:^"
   }
 }
