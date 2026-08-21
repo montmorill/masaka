@@ -1,3 +1,5 @@
+import type { Element } from '@yarkjs/element'
+
 /** 用户对象 */
 export interface User {
   /** 用户 ID */ id: string
@@ -51,7 +53,7 @@ export interface Channel {
 /** 消息对象 */
 export interface Message {
   /** 消息 ID */ id?: string
-  /** 消息内容（Satori 消息元素编码的字符串） */ content?: string
+  /** 消息内容（消息元素树；推送前序列化为 Satori 内容串） */ content?: Element<'message'>
   /** 消息所在频道（事件中会提升到顶层） */ channel?: Channel
   /** 消息所在群组（事件中会提升到顶层） */ guild?: Guild
   /** 消息发送者（事件中会提升到顶层） */ member?: GuildMember

@@ -2,6 +2,7 @@ import type { SatoriDriver } from './driver'
 import { createLogger } from '@yarkjs/logger'
 import * as Satori from '@yarkjs/protocol'
 import { SatoriError } from './driver'
+import { serialize } from './encoder'
 
 const logger = createLogger('satori')
 
@@ -140,11 +141,18 @@ export class SatoriServer {
   }
 
   protected broadcast(event: Satori.Event): void {
-    const body = { ...event, sn: ++this.seq }
+    const body: Satori.Event = { ...event, sn: ++this.seq }
+    // 消息内容以元素树传输，推送前序列化为 Satori 内容串（wire 与内部类型不同，故用 unknown 承载）
+    let wire: unknown = body
+    if ('message' in body && body.message) {
+      const { content } = body.message
+      if (content !== undefined && typeof content !== 'string')
+        wire = { ...body, message: { ...body.message, content: serialize(content) } }
+    }
     for (const session of this.sessions) {
       if (!this.ready.has(session))
         continue
-      session.send(JSON.stringify({ op: Satori.Op.Event, body }))
+      session.send(JSON.stringify({ op: Satori.Op.Event, body: wire }))
     }
   }
 

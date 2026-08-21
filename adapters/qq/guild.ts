@@ -1,8 +1,8 @@
+import type { Element } from '@yarkjs/element'
 import type { SatoriDriver } from '@yarkjs/satori'
 import type { QQBot } from './bot'
-import h, { Element } from '@yarkjs/element'
+import h from '@yarkjs/element'
 import * as Satori from '@yarkjs/protocol'
-import { serialize } from '@yarkjs/satori'
 import * as QQ from './common'
 
 /** 观察到的 channel id → 场景（由适配器维护，供 action 消歧） */
@@ -107,14 +107,11 @@ export function parseReactionRemove(reaction: QQ.MessageReaction): Satori.EventB
   }
 }
 
-/** 剥离顶层 author 子元素（其信息由事件 user/member 承载）后序列化消息内容 */
+/** 消息资源：内容保留为元素树，推送前由服务端序列化为 Satori 内容串 */
 export function messageResource(element: Element<'message'>, edited?: string): Satori.Message {
   return {
     id: element.attrs.id,
-    content: element.children
-      .filter(child => !(child instanceof Element && child.type === 'author'))
-      .map(serialize)
-      .join(''),
+    content: element,
     created_at: element.attrs.timestamp,
     updated_at: edited === undefined ? undefined : Date.parse(edited),
   }
