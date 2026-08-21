@@ -1239,9 +1239,16 @@ export interface StreamMessageResult {
   /** 流式消息剩余长度（字符） */ remain_msg_len: number
 }
 
+export enum UploadPrepareFileType {
+  Image = 1,
+  Video = 2,
+  Audio = 3,
+  File = 4,
+}
+
 /** 分片上传准备参数 */
 export interface UploadPrepare {
-  /** 1 图片，2 视频，3 语音，4 文件 */ file_type: 1 | 2 | 3 | 4
+  /** 1 图片，2 视频，3 语音，4 文件 */ file_type: UploadPrepareFileType
   /** 文件名 */ file_name: string
   /** 文件大小（字节） */ file_size: string
   /** 完整文件 MD5 */ md5: string
@@ -1274,7 +1281,16 @@ export interface ShareUrlToCreate {
   /** 添加好友时会回传该参数给开发者 */ callback_data?: string
 }
 
+export enum InteractionCallbackCode {
+  Success = 0,
+  Failed = 1,
+  RateLimited = 2,
+  Duplicated = 3,
+  NoPermission = 4,
+  AdminOnly = 5,
+}
+
 /** 互动回应参数（PUT /interactions/{interaction_id}） */
 export interface InteractionCallback {
-  /** 0 成功，1 操作失败，2 操作频繁，3 重复操作，4 没有权限，5 仅管理员操作 */ code: 0 | 1 | 2 | 3 | 4 | 5
+  /** 0 成功，1 操作失败，2 操作频繁，3 重复操作，4 没有权限，5 仅管理员操作 */ code: InteractionCallbackCode
 }
