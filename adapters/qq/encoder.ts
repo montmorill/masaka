@@ -31,6 +31,10 @@ export class QQMessageEncoder {
     protected scene: QQ.Scene,
   ) {}
 
+  protected get userOpenid(): string {
+    return this.channelId.slice('private:'.length)
+  }
+
   visit(fragment: Fragment): this {
     if (typeof fragment === 'string') {
       this.content += fragment
@@ -85,10 +89,5 @@ export class QQMessageEncoder {
       ? await this.bot.sendGroupMessage(this.channelId, message)
       : await this.bot.sendUserMessage(this.userOpenid, message)
     return [{ id }]
-  }
-
-  /** private 场景去掉 `private:` 前缀得到用户 openid */
-  protected get userOpenid(): string {
-    return this.channelId.slice('private:'.length)
   }
 }
