@@ -1294,3 +1294,9 @@ export enum InteractionCallbackCode {
 export interface InteractionCallback {
   /** 0 成功，1 操作失败，2 操作频繁，3 重复操作，4 没有权限，5 仅管理员操作 */ code: InteractionCallbackCode
 }
+
+export enum Scene {
+  Guild,
+  Group,
+  Private,
+}

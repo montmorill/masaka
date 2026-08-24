@@ -1,4 +1,5 @@
 import type { Fragment } from '@yarkjs/element'
+import type { Message } from '@yarkjs/protocol'
 import type { QQBot } from './bot'
 import { createLogger } from '@yarkjs/logger'
 import * as QQ from './common'
@@ -14,29 +15,20 @@ const MEDIA_TYPES = {
 
 type MediaElementType = keyof typeof MEDIA_TYPES
 
-/** 发送场景：private 单聊，group 群聊，guild 频道 */
-export type QQScene = 'private' | 'group' | 'guild'
-
 interface PendingMedia {
   url: string
   type: QQ.MediaUpload['file_type']
   name?: string
 }
 
-/**
- * QQ 消息编码器：visit 累积元素，flush 按场景发送。
- * 文本与 @ 拼接为 content；首个媒体元素在 flush 时上传并以 msg_type=7 发送；
- * 频道场景暂不支持媒体（降级为纯文本并告警）。
- */
 export class QQMessageEncoder {
   protected content = ''
   protected media?: PendingMedia
 
   constructor(
     protected bot: QQBot,
-    /** 目标频道 id；private 场景携带 `private:` 前缀 */
     protected channelId: string,
-    protected scene: QQScene,
+    protected scene: QQ.Scene,
   ) {}
 
   visit(fragment: Fragment): this {
@@ -72,33 +64,28 @@ export class QQMessageEncoder {
     return this
   }
 
-  async flush(): Promise<{ id: string }> {
-    if (this.scene === 'guild') {
+  async flush(): Promise<Message[]> {
+    if (this.scene === QQ.Scene.Guild) {
       if (this.media)
         logger.warn('guild scene does not support media, dropped', this.media)
-      const result = await this.bot.sendChannelMessage(this.channelId, { content: this.content })
-      return { id: result.id }
+      const { id } = await this.bot.sendChannelMessage(this.channelId, { content: this.content })
+      return [{ id }]
     }
+    let message: QQ.MessageToSend = { msg_type: QQ.MessageType.Text, content: this.content }
     if (this.media) {
-      const upload = this.scene === 'private'
-        ? await this.bot.uploadUserFile(this.userOpenid, { url: this.media.url, file_type: this.media.type, file_name: this.media.name })
-        : await this.bot.uploadGroupFile(this.channelId, { url: this.media.url, file_type: this.media.type, file_name: this.media.name })
-      const message: QQ.MessageToSend = {
+      const upload = this.scene === QQ.Scene.Group
+        ? await this.bot.uploadGroupFile(this.channelId, { url: this.media.url, file_type: this.media.type, file_name: this.media.name })
+        : await this.bot.uploadUserFile(this.userOpenid, { url: this.media.url, file_type: this.media.type, file_name: this.media.name })
+      message = {
         msg_type: QQ.MessageType.Media,
-        // 文档要求 msg_type=7 时 content 至少有一个值（如空格）
         content: this.content || ' ',
         media: { file_info: upload.file_info },
       }
-      const result = this.scene === 'private'
-        ? await this.bot.sendUserMessage(this.userOpenid, message)
-        : await this.bot.sendGroupMessage(this.channelId, message)
-      return { id: result.id }
     }
-    const message: QQ.MessageToSend = { msg_type: QQ.MessageType.Text, content: this.content }
-    const result = this.scene === 'private'
-      ? await this.bot.sendUserMessage(this.userOpenid, message)
-      : await this.bot.sendGroupMessage(this.channelId, message)
-    return { id: result.id }
+    const { id } = this.scene === QQ.Scene.Group
+      ? await this.bot.sendGroupMessage(this.channelId, message)
+      : await this.bot.sendUserMessage(this.userOpenid, message)
+    return [{ id }]
   }
 
   /** private 场景去掉 `private:` 前缀得到用户 openid */

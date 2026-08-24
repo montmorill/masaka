@@ -8,7 +8,7 @@ import * as Satori from '@yarkjs/protocol'
 import * as QQ from './common'
 
 /** 观察到的 channel id → 场景（由适配器维护，供 action 消歧） */
-export type ChannelScenes = Map<string, 'group' | 'guild'>
+export type ChannelScenes = Map<string, QQ.Scene>
 
 /** QQ 频道类型 → Satori 频道类型 */
 export function mapChannelType(type: number): Satori.ChannelType {
@@ -112,7 +112,7 @@ export function parseReactionRemove(reaction: QQ.MessageReaction): Satori.EventB
 /** 消息资源：内容保留为元素树，推送前由服务端序列化为 Satori 内容串 */
 export function messageResource(element: Element<'message'>, edited?: string): Satori.Message {
   return {
-    id: element.attrs.id,
+    id: element.attrs.id!,
     content: element,
     created_at: element.attrs.timestamp,
     updated_at: edited === undefined ? undefined : Date.parse(edited),
@@ -144,7 +144,7 @@ export function parseGuildMessageElement(message: QQ.GuildMessage): Element<'mes
 
 export function parseGuildMessage(message: QQ.GuildMessage, scenes: ChannelScenes): Satori.EventBody<'message-created'> {
   const element = parseGuildMessageElement(message)
-  scenes.set(message.channel_id, 'guild')
+  scenes.set(message.channel_id, QQ.Scene.Guild)
   const user = parseGuildUser(message.author)
   return {
     message: messageResource(element, message.edited_timestamp),
@@ -192,7 +192,7 @@ export function guildActions(bot: QQBot, scenes: ChannelScenes): SatoriDriver['a
       return { data: channels.map(mapGuildChannel) }
     },
     'guild.get': async ({ guild_id }) => {
-      if (scenes.get(guild_id) === 'group') {
+      if (scenes.get(guild_id) === QQ.Scene.Group) {
         const info = await bot.getGroupInfo(guild_id)
         return { id: info.group_openid, name: info.group_name }
       }
@@ -200,7 +200,7 @@ export function guildActions(bot: QQBot, scenes: ChannelScenes): SatoriDriver['a
       return { id: guild.id, name: guild.name, avatar: guild.icon }
     },
     'guild.member.get': async ({ guild_id, user_id }) => {
-      if (scenes.get(guild_id) === 'group') {
+      if (scenes.get(guild_id) === QQ.Scene.Group) {
         const member = await bot.getGroupMember(guild_id, user_id)
         return { user: { id: member.member_openid, name: member.username, is_bot: member.bot } }
       }

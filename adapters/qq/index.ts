@@ -10,6 +10,7 @@ import { noop } from '@yarkjs/utils'
 import { QQAdapter } from './adapter'
 import { QQBot } from './bot'
 import * as QQ from './common'
+import { QQMessageEncoder } from './encoder'
 import { QQGuildAdapter } from './guild'
 import { QQBotServer } from './webhook'
 import { QQBotWS } from './websocket'
@@ -51,13 +52,17 @@ const scenes: ChannelScenes = new Map()
 const adapter = new QQAdapter(bot, emitter, selfId, scenes)
 const guildAdapter = new QQGuildAdapter(bot, emitter, selfId, scenes)
 
-adapter.on('message-created', logger.info)
-guildAdapter.on('message-created', logger.info)
+adapter.on('message-created', (event) => {
+  logger.info(event)
+  const composer = new QQMessageEncoder(bot, event.channel.id, QQ.Scene.Group)
+  composer.visit(event.message.content!)
+  composer.flush()
+})
 
 if (env.SATORI_PORT) {
-  const server = SatoriServer.create([adapter, guildAdapter], {
+  const server = SatoriServer.create({
     port: Number(env.SATORI_PORT),
     token: env.SATORI_TOKEN,
-  })
+  }, adapter, guildAdapter)
   logger.info('satori server listening on port', server.port)
 }

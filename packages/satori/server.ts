@@ -63,9 +63,8 @@ export class SatoriServer {
     }
   }
 
-  static create(drivers: SatoriDriver | SatoriDriver[], options: SatoriServerOptions = {}): SatoriServer {
-    const list = Array.isArray(drivers) ? drivers : [drivers]
-    const server = new SatoriServer(list, options, undefined as unknown as BunServer)
+  static create(options: SatoriServerOptions = {}, ...drivers: SatoriDriver[]): SatoriServer {
+    const server = new SatoriServer(drivers, options, undefined as unknown as BunServer)
     server.inner = Bun.serve({
       port: options.port,
       hostname: '127.0.0.1',

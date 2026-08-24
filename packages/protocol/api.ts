@@ -12,7 +12,7 @@ import type {
 
 /** 各 action 的参数与返回数据类型 */
 export interface ActionMap {
-  'message.create': { params: { channel_id: string, guild_id?: string, content: string }, data: Message }
+  'message.create': { params: { channel_id: string, guild_id?: string, content: string }, data: Message[] }
   'message.delete': { params: { channel_id: string, message_id: string }, data: undefined }
   'message.get': { params: { channel_id: string, message_id: string }, data: Message }
   'message.list': { params: { channel_id?: string, guild_id?: string, next?: string, limit?: number }, data: { data: Message[], next?: string } }

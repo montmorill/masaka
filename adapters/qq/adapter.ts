@@ -73,10 +73,12 @@ export class QQAdapter extends EventEmitter<Satori.EventMap> implements SatoriDr
     this.actions = {
       'message.create': async ({ channel_id, guild_id, content }) => {
         const scene = channel_id.startsWith('private:')
-          ? 'private'
-          : guild_id === channel_id || scenes.get(channel_id) === 'group' || !/^\d+$/.test(channel_id)
-            ? 'group'
-            : 'guild'
+          ? QQ.Scene.Private
+          : guild_id === channel_id
+            || scenes.get(channel_id) === QQ.Scene.Group
+            || !/^\d+$/.test(channel_id)
+            ? QQ.Scene.Group
+            : QQ.Scene.Guild
         return await new QQMessageEncoder(this.bot, channel_id, scene)
           .visit(parseContent(content))
           .flush()
@@ -84,7 +86,7 @@ export class QQAdapter extends EventEmitter<Satori.EventMap> implements SatoriDr
       'message.delete': async ({ channel_id, message_id }) => {
         if (channel_id.startsWith('private:'))
           return await this.bot.recallUserMessage(channel_id.slice('private:'.length), message_id)
-        if (scenes.get(channel_id) === 'group' || !/^\d+$/.test(channel_id))
+        if (scenes.get(channel_id) === QQ.Scene.Group || !/^\d+$/.test(channel_id))
           return await this.bot.recallGroupMessage(channel_id, message_id)
         return await this.bot.recallChannelMessage(channel_id, message_id)
       },
@@ -171,7 +173,6 @@ export class QQAdapter extends EventEmitter<Satori.EventMap> implements SatoriDr
   parseMember(member: QQ.Member): Satori.GuildMember {
     return {
       user: this.parseUser(member),
-      nick: member.username,
     }
   }
 
@@ -322,7 +323,7 @@ export class QQAdapter extends EventEmitter<Satori.EventMap> implements SatoriDr
     const member = this.parseMember(message.author)
     const element = this.parseMessageContent(message)
     element.children.unshift(h.author(member))
-    this.channelScenes.set(message.group_openid, 'group')
+    this.channelScenes.set(message.group_openid, QQ.Scene.Group)
     return {
       message: messageResource(element),
       channel: { id: message.group_openid, type: Satori.ChannelType.Text },
