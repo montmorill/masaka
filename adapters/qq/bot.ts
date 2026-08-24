@@ -54,22 +54,18 @@ export class QQBot {
     init.headers = headers
 
     const resp = await fetch(input, init)
-    const text = await resp.text()
-    const res = JSON.parse(text) as QQ.Error | T
-    if (typeof res === 'object' && res !== null && 'err_code' in res) {
-      const message = `${res.err_code} ${res.message} trace_id: ${res.trace_id}`
-      throw new Error(message, { cause: res })
+    const data = await resp.json() as QQ.Error | T
+    if (data && typeof data === 'object' && 'err_code' in data) {
+      const message = `${data.err_code} ${data.message} trace_id: ${data.trace_id}`
+      throw new Error(message, { cause: data })
     }
-    return res
+    return data
   }
 
-  /** 构建查询字符串，忽略值为 undefined 的参数 */
-  private query(params: Record<string, string | number | boolean | undefined> = {}): string {
+  protected query(params: Record<string, unknown> = {}): string {
     const search = new URLSearchParams()
-    for (const [key, value] of Object.entries(params)) {
-      if (value !== undefined)
-        search.set(key, String(value))
-    }
+    for (const [key, value] of Object.entries(params))
+      value !== undefined && search.set(key, String(value))
     return search.size ? `?${search}` : ''
   }
 
@@ -80,6 +76,7 @@ export class QQBot {
     catch (error) {
       if (error instanceof Error && (error.cause as QQ.Error).err_code === 40023001)
         logger.warn('gateway', error.message, 'fallback to', GATEWAY_URL)
+      else throw error
       return { url: GATEWAY_URL }
     }
   }

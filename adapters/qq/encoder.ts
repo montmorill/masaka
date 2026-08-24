@@ -64,23 +64,22 @@ export class QQMessageEncoder {
     return this
   }
 
-  async flush(): Promise<Message[]> {
+  async flush(message: QQ.MessageToSend): Promise<Message[]> {
     if (this.scene === QQ.Scene.Guild) {
       if (this.media)
         logger.warn('guild scene does not support media, dropped', this.media)
       const { id } = await this.bot.sendChannelMessage(this.channelId, { content: this.content })
       return [{ id }]
     }
-    let message: QQ.MessageToSend = { msg_type: QQ.MessageType.Text, content: this.content }
+    message.msg_type = QQ.MessageType.Text
+    message.content = this.content
     if (this.media) {
       const upload = this.scene === QQ.Scene.Group
         ? await this.bot.uploadGroupFile(this.channelId, { url: this.media.url, file_type: this.media.type, file_name: this.media.name })
         : await this.bot.uploadUserFile(this.userOpenid, { url: this.media.url, file_type: this.media.type, file_name: this.media.name })
-      message = {
-        msg_type: QQ.MessageType.Media,
-        content: this.content || ' ',
-        media: { file_info: upload.file_info },
-      }
+      message.msg_type = QQ.MessageType.Media
+      message.content ||= ' '
+      message.media = { file_info: upload.file_info }
     }
     const { id } = this.scene === QQ.Scene.Group
       ? await this.bot.sendGroupMessage(this.channelId, message)

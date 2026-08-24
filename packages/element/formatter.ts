@@ -1,8 +1,8 @@
 import type { Overwrite } from '@yarkjs/utils'
 import type { InspectColor, InspectOptions } from 'node:util'
-import type { ElementJSON } from './jsx-runtime'
+import type { ElementJSON } from '@yarkjs/element/jsx-runtime'
 import { inspect, stripVTControlCharacters, styleText } from 'node:util'
-import { Element, Fragment } from './jsx-runtime'
+import { Element, Fragment } from '@yarkjs/element/jsx-runtime'
 
 export interface FormatOptions extends InspectOptions {
   /** Maximum number of characters of attr string values, defaults to `maxStringLength`. */

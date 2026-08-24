@@ -1,9 +1,9 @@
 import type { Merge, Overloads, Pretty, Xor } from '@yarkjs/utils'
 import type { Inspectable } from 'node:util'
-import type { FormatOptions } from './formatter'
+import type { FormatOptions } from '@yarkjs/element/formatter'
 import { inspect } from 'node:util'
-import { BufferFormatter } from './formatter'
-import { unpack } from './utils'
+import { BufferFormatter } from '@yarkjs/element/formatter'
+import { unpack } from '@yarkjs/element/utils'
 
 export const Fragment = 'template'
 

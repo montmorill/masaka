@@ -1,6 +1,6 @@
-import type { Fragment, JSXElements } from './jsx-runtime'
+import type { Fragment, JSXElements } from '@yarkjs/element/jsx-runtime'
 import { lazy } from '@yarkjs/utils'
-import h, { Element } from './jsx-runtime'
+import h, { Element } from '@yarkjs/element/jsx-runtime'
 
 export function pack(children: Fragment[], wrap?: false): Fragment
 export function pack(children: Fragment[], wrap: true): Element
