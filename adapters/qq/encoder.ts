@@ -1,4 +1,4 @@
-import type { Fragment } from '@yarkjs/element'
+import type { Element, Fragment } from '@yarkjs/element'
 import type { Message } from '@yarkjs/protocol'
 import type { QQBot } from './bot'
 import { createLogger } from '@yarkjs/logger'
@@ -38,32 +38,27 @@ export class QQMessageEncoder {
   visit(fragment: Fragment): this {
     if (typeof fragment === 'string') {
       this.content += fragment
-      return this
     }
-    switch (fragment.type) {
-      case 'mention': {
-        const attrs = fragment.attrs as { everyone?: true, user?: string }
-        this.content += attrs.everyone
-          ? '<@all>'
-          : typeof attrs.user === 'string' ? `<@${attrs.user}>` : ''
-        break
+    else if (fragment.type === 'mention') {
+      const { attrs } = fragment as Element<'mention'>
+      this.content += attrs.everyone ? '<@all>'
+        : attrs.user ? `<@${attrs.user}>` : ''
+    }
+    else if (fragment.type === 'image'
+      || fragment.type === 'audio'
+      || fragment.type === 'video'
+      || fragment.type === 'file') {
+      const { attrs } = fragment as Element<'image' | 'audio' | 'video' | 'file'>
+      if (typeof attrs.src === 'string') {
+        if (this.media)
+          logger.warn('multiple media elements, only the first is sent', this.media, attrs.src)
+        else
+          this.media = { url: attrs.src, type: MEDIA_TYPES[fragment.type as MediaElementType], name: attrs.title }
       }
-      case 'image':
-      case 'audio':
-      case 'video':
-      case 'file': {
-        const attrs = fragment.attrs as { src?: string, title?: string }
-        if (typeof attrs.src === 'string') {
-          if (this.media)
-            logger.warn('multiple media elements, only the first is sent', this.media, attrs.src)
-          else
-            this.media = { url: attrs.src, type: MEDIA_TYPES[fragment.type as MediaElementType], name: attrs.title }
-        }
-        break
-      }
-      default:
-        for (const child of fragment.children)
-          this.visit(child)
+    }
+    else {
+      for (const child of fragment.children)
+        this.visit(child)
     }
     return this
   }
