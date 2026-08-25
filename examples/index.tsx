@@ -5,7 +5,7 @@ import h from '@yarkjs/element'
 import { markdown } from '@yarkjs/markdown'
 
 // try uncomment this line!
-// inspect.defaultOptions.compact = 2
+// inspect.defaultOptions.compact = true
 inspect.defaultOptions.colors = true
 inspect.defaultOptions.depth = Infinity
 
