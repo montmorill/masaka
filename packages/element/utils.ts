@@ -1,6 +1,7 @@
-import type { Fragment, JSXElements } from '@yarkjs/element/jsx-runtime'
+import type { Overwrite } from '@yarkjs/utils'
+import type { ElementType, Fragment } from './jsx-runtime'
 import { lazy } from '@yarkjs/utils'
-import h, { Element } from '@yarkjs/element/jsx-runtime'
+import h, { Element } from './jsx-runtime'
 
 export function pack(children: Fragment[], wrap?: false): Fragment
 export function pack(children: Fragment[], wrap: true): Element
@@ -22,13 +23,15 @@ export function raw(strings: TemplateStringsArray, ...values: Fragment[]): Fragm
 }
 
 export type Transformer<T extends Fragment = Fragment> = (fragment: T) => Fragment[]
-export type ElementVisitors = { [T in keyof JSXElements]?: Transformer<Element<T>> }
-export function transform(visitors: { text?: Transformer<string> } & ElementVisitors): Transformer {
+export function transform(visitors: Overwrite<{
+  [T in JSX.ElementType as ElementType<T>]?: Transformer<Element<T>>
+}, { text?: Transformer<string> }>): Transformer {
   return function transform(fragment: Fragment) {
     if (typeof fragment === 'string' && visitors.text)
       return Array.from(visitors.text(fragment))
     if (fragment instanceof Element) {
       fragment.children = fragment.children.flatMap(transform)
+      // @ts-ignore
       const visit = visitors[fragment.type]
       if (visit)
         return Array.from(visit(fragment as any))
