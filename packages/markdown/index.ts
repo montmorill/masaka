@@ -39,6 +39,7 @@ export interface MarkdownElement {
   code: object
   paragraph: object
   blockquote: object
+  /** @deprecated use template instead */
   item: object
   list: { ordered?: boolean }
   heading: { level: number }
@@ -63,7 +64,7 @@ const TRANSFORMERS: Record<NodeType, (node: Node) => Fragment> = {
   document: node => h.template(...transformChildren(node)),
   paragraph: node => h.paragraph(...transformChildren(node)),
   block_quote: node => h.blockquote(...transformChildren(node)),
-  item: node => h.item(...transformChildren(node)),
+  item: node => h.template(...transformChildren(node)),
   list: node => h.list({ ordered: node.listType === 'ordered' }, ...transformChildren(node) as Element<'item'>[]),
   heading: node => h.heading({ level: node.level }, ...transformChildren(node)),
   code_block: node => h.codeblock(stripNullish({ info: node.info }), node.literal!),
@@ -92,7 +93,7 @@ declare module '@yarkjs/element' {
     a(attrs: ElementProps['link']): Element<'link'>
     img(attrs: ElementProps['image']): Element<'image'>
     p(attrs: ElementProps['paragraph']): Element<'paragraph'>
-    li(attrs: ElementProps['item']): Element<'item'>
+    li(attrs: ElementProps['template']): Element<'template'>
     ul(attrs: Except<ElementProps['list'], 'ordered'>): Element<'list'>
     ol(attrs: Except<ElementProps['list'], 'ordered'>): Element<'list'>
     h1(attrs: Except<ElementProps['heading'], 'level'>): Element<'heading'>
@@ -111,7 +112,7 @@ h.components.b = h.b = (...args) => h.bold(...args)
 h.components.a = h.a = (...args) => h.link(...args)
 h.components.img = h.img = (...args) => h.image(...args)
 h.components.p = h.p = (...args) => h.paragraph(...args)
-h.components.li = h.li = (...args) => h.item(...args)
+h.components.li = h.li = (...args) => h.template(...args)
 h.components.ul = h.ul = (...args) => h.list({ ordered: false }).update(...args)
 h.components.ol = h.ol = (...args) => h.list({ ordered: true }).update(...args)
 h.components.h1 = h.h1 = (...args) => h.heading({ level: 1 }).update(...args)
