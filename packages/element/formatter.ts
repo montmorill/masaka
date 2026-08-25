@@ -1,8 +1,8 @@
 import type { Overwrite } from '@yarkjs/utils'
 import type { InspectColor, InspectOptions } from 'node:util'
-import type { ElementJSON } from '@yarkjs/element/jsx-runtime'
+import type { ElementJSON } from './jsx-runtime'
 import { inspect, stripVTControlCharacters, styleText } from 'node:util'
-import { Element, Fragment } from '@yarkjs/element/jsx-runtime'
+import { Element, Fragment } from './jsx-runtime'
 
 export interface FormatOptions extends InspectOptions {
   /** Maximum number of characters of attr string values, defaults to `maxStringLength`. */
@@ -138,7 +138,7 @@ export class Formatter {
    * Print attrs, breaking lines when they no longer fit the remaining
    * width. Returns whether any line was broken.
    */
-  attrs(attrs: Record<string, unknown>): boolean {
+  attrs(attrs: object): boolean {
     const entries = Object.entries(attrs)
     if (this.opts.sorted === true) {
       entries.sort()
