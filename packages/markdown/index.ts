@@ -39,8 +39,6 @@ export interface MarkdownElement {
   code: object
   paragraph: object
   blockquote: object
-  /** @deprecated use template instead */
-  item: object
   list: { ordered?: boolean }
   heading: { level: number }
   codeblock: { info?: string }
