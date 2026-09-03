@@ -25,7 +25,6 @@ if (!env.QQ_APP_ID || !env.QQ_APP_SECRET)
 const bot = await QQBot.create(env.QQ_APP_ID, env.QQ_APP_SECRET)
 logger.info('bot connected', bot.appId)
 
-let selfId = bot.appId
 let emitter: EventEmitter<QQ.DispatchEventMap>
 
 if (env.QQ_SERVER_PORT) {
@@ -33,21 +32,15 @@ if (env.QQ_SERVER_PORT) {
   const server = await QQBotServer.create(bot)
   await new Promise<void>(resolve => server.listen(port, resolve))
   logger.info('server listening on port', port)
-  try {
-    const me = await bot.getMe()
-    selfId = me.id
-  }
-  catch {}
   emitter = server.emitter
 }
 else {
   const ws = await QQBotWS.create(bot, QQ.Intents.ALL)
   logger.info('websocket connected', ws.sessionId)
-  selfId = ws.user.id
   emitter = ws
 }
 
-const adapter = new QQAdapter(bot, emitter, selfId)
+const adapter = new QQAdapter(bot, emitter)
 
 adapter.on('message-created', (event) => {
   logger.info(event)
