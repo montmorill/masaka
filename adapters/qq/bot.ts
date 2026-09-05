@@ -7,8 +7,8 @@ const GATEWAY_URL = 'wss://api.sgroup.qq.com/websocket'
 
 export class QQBot {
   protected constructor(
-    public appId: string,
-    public appSecret: string,
+    public id: string,
+    public secret: string,
     public baseUrl: string,
   ) {}
 
@@ -31,8 +31,8 @@ export class QQBot {
     >('/app/getAppAccessToken', {
       method: 'POST',
       body: JSON.stringify({
-        appId: this.appId,
-        clientSecret: this.appSecret,
+        appId: this.id,
+        clientSecret: this.secret,
       }),
     })
     if ('message' in res)
