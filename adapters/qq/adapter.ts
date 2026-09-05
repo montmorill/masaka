@@ -138,7 +138,7 @@ export class QQAdapter extends EventEmitter<Satori.EventMap> implements Partial<
   parseMember(member: QQ.Member): Satori.GuildMember {
     return {
       user: this.parseUser(member),
-      // TODO: oles: [member.member_role],
+      // TODO: roles: [member.member_role],
     }
   }
 
